@@ -1,10 +1,34 @@
 import sys
 import random
+import time
 
 import pygame
 pygame.font.init()
 
 import gpiozero as gpio
+import rpi_ws281x as rpi
+strip = rpi.PixelStrip(40,18)
+strip.begin()
+
+for i in range(0,40) :
+    for j in range(0,40) :
+        strip.setPixelColor(j,rpi.Color(0,0,0))
+    strip.setPixelColor(i,rpi.Color(255,255,255))
+    strip.show()
+    time.sleep(0.5)
+
+class Leds() :
+    def __init__(self,strip) :
+        self.strip=strip
+        self.count=0
+    def step(self) :
+        for i in range(0,40) :
+            self.strip.setPixelColor(i,rpi.Color(0,0,0))
+        if self.count>0 :
+            self.count=self.count-1
+            for i in range(0,40) :
+                self.strip.setPixelColor(i,rpi.Color(255,255,255))
+        self.strip.show()
 
 from tools import *
 
@@ -97,6 +121,7 @@ trashs=[
 CURRENT_TRASH=trashs[0]
 TIMEOUT=0
 ANIMATIONS=[]
+LED_HANDLER=Leds(strip)
 
 def new_trash() :
     global CURRENT_TRASH
@@ -109,8 +134,10 @@ def pressed(btn) :
     global CURRENT_TRASH
     global TIMEOUT
     global ANIMATIONS
+    global LED_HANDLER
     if TIMEOUT==0 :
         TIMEOUT=BTN_TIMEOUT
+        LED_HANDLER.count=20
         if CURRENT_TRASH.check_value(btn) :
             ANIMATIONS.append(Pop(15,debug_font.render("Gagné !",1,BLACK,COLOR_BG),(800,450-200)))
         else :
@@ -167,11 +194,12 @@ while on :
         if animation.finished :
             ANIMATIONS.pop(i)
 
+    LED_HANDLER.step()
 
     #Show DEBUG
     if DEBUG :
         fps = str(round(CLOCK.get_fps(),1))
-        btns_status=f"y : {str(btn_y.is_pressed)}"+f" g : {str(btn_g.is_pressed)}"+f" b : {str(btn_b.is_pressed)}"+f" TIMEOUT : {str(TIMEOUT)}"+f" ANIMATIONS : {str(ANIMATIONS)}"
+        btns_status=f"y : {str(btn_y.is_pressed)}"+f" g : {str(btn_g.is_pressed)}"+f" b : {str(btn_b.is_pressed)}"+f" TIMEOUT : {str(TIMEOUT)}"+f" LED COUNT : {str(LED_HANDLER.count)}"
         txt = "DEBUG MODE | FPS : "+fps+f" | Button values : {btns_status}"
         to_blit=debug_font.render(txt,1,WHITE,COLOR_BG)
         SCREEN.blit(to_blit,(0,0))

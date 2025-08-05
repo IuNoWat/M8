@@ -7,59 +7,55 @@ pygame.font.init()
 
 import gpiozero as gpio
 import rpi_ws281x as rpi
-strip = rpi.PixelStrip(40,18)
-strip.begin()
-
-for i in range(0,40) :
-    for j in range(0,40) :
-        strip.setPixelColor(j,rpi.Color(0,0,0))
-    strip.setPixelColor(i,rpi.Color(255,255,255))
-    strip.show()
-    time.sleep(0.5)
-
-class Leds() :
-    def __init__(self,strip) :
-        self.strip=strip
-        self.count=0
-    def step(self) :
-        for i in range(0,40) :
-            self.strip.setPixelColor(i,rpi.Color(0,0,0))
-        if self.count>0 :
-            self.count=self.count-1
-            for i in range(0,40) :
-                self.strip.setPixelColor(i,rpi.Color(255,255,255))
-        self.strip.show()
 
 from tools import *
 
 #CONSTANTS
 FPS=30
+DIR="/home/pi/Desktop/M8/"
 SCREEN_SIZE=(1600, 900)
 FULLSCREEN=True
-BTN_TIMEOUT=10
-DIR="/home/pi/Desktop/M8/"
 
+#Define DEBUG
 try :
     if sys.argv[1]=="debug" :
         DEBUG=True
 except IndexError :
     DEBUG=False
 
-GPIO_y="BOARD8"
-GPIO_g="BOARD10"
-GPIO_b="BOARD12"
+#LED CONSTANTS
+LED_y=[0,1,2,3,4,5,6,7,8]
+LED_g=[14,15,16,17,18,19,20,21,22]
+LED_b=[34,35,36,37,38,39,40,41,42,43]
+LED_r=[53,54,55,56,57,58,59,60]
+LED_p=[67,68,69,70,71,72,73,74,75,76]
 
+#GPIO CONSTANTS
+GPIO_y="BOARD22"
+GPIO_g="BOARD18"
+GPIO_b="BOARD16"
+GPIO_r="BOARD10" 
+GPIO_p="BOARD32"
+GPIO_start="BOARD8"
+GPIO_led=18
+
+#Engine CONSTANTS in frame
+BTN_TIMEOUT=10
+TRASH_CHANGE=90
+
+#Animation CONSTANTS
 
 #STYLE
 WHITE=pygame.Color("White")
 BLACK=pygame.Color("Black")
 GREEN=pygame.Color("Green")
 RED=pygame.Color("Red")
+BLUE=pygame.Color("Blue")
 COLOR_BG=pygame.Color(242,193,202,255)
 COLOR_HL=pygame.Color(255,255,255,255)
 
-debug_font=pygame.font.Font('freesansbold.ttf',16)
-
+debug_font=pygame.font.Font('freesansbold.ttf',14)
+score_font=pygame.font.Font('freesansbold.ttf',48)
 
 #ASSETS
 select = pygame.image.load(DIR+"assets/select.png")
@@ -72,17 +68,6 @@ b0=pygame.image.load(DIR+"assets/b_1.png")
 b1=pygame.image.load(DIR+"assets/b_0.png")
 
 #ENGINE
-
-class Trash() :
-    def __init__(self,img,good_value,txt) :
-        self.img=img
-        self.good_value=good_value
-        self.txt=txt
-    def check_value(self,btn) :
-        if btn==self.good_value :
-            return True
-        else :
-            return False
 
 class Anim() :
     def __init__(self,max_frame) :
@@ -98,7 +83,7 @@ class Anim() :
 
 class Pop(Anim) :
     def moove(self,current_frame) :
-        self.img.set_alpha(255-current_frame*16)
+        self.img.set_alpha(255-current_frame*12)
         center_blit(SCREEN,self.img,(self.pos[0],self.pos[1]-current_frame*3))
     def __init__(self,max_frame,img,pos) :
         Anim.__init__(self,max_frame)
@@ -109,6 +94,136 @@ class Pop(Anim) :
         print(self.current_frame)
         Anim.anim(self)
 
+#Led Handler
+class Leds() :
+    def __init__(self,pin,nb_of_leds) :
+        self.nb_of_leds=nb_of_leds
+        self.strip=rpi.PixelStrip(nb_of_leds,pin)
+        self.strip.begin()
+        #Colors
+        self.WHITE=rpi.Color(255,255,255)
+        self.BLACK=rpi.Color(0,0,0)
+        self.RED=rpi.Color(255,0,0)
+        self.GREEN=rpi.Color(0,255,0)
+        self.BLUE=rpi.Color(0,0,255)
+        self.YELLOW=rpi.Color(255,255,0)
+        self.PURPLE=rpi.Color(255,0,255)
+        #Engine value
+        self.current_mode=False
+        self.count=0
+        self.current_color=self.WHITE
+    def test(self) :
+        for i in range(0,self.nb_of_leds) :
+            for j in range(0,self.nb_of_leds) :
+                self.strip.setPixelColor(j,self.BLACK)
+            self.strip.setPixelColor(i,self.WHITE)
+            self.strip.show()
+            print(i)
+            time.sleep(0.01)
+    def base_colors(self) :
+        for i in LED_y :
+            self.strip.setPixelColor(i,self.YELLOW)
+        for i in LED_g :
+            self.strip.setPixelColor(i,self.GREEN)
+        for i in LED_b :
+            self.strip.setPixelColor(i,self.BLUE)
+        for i in LED_r :
+            self.strip.setPixelColor(i,self.RED)
+        for i in LED_p :
+            self.strip.setPixelColor(i,self.PURPLE)
+    def step(self) :
+        for i in range(0,self.nb_of_leds) :
+            self.strip.setPixelColor(i,self.BLACK)
+            self.base_colors()
+        if self.current_mode!=False :
+            match self.current_mode :
+                case "flash" :
+                    self.flash()
+                case _ :
+                    pass
+        self.strip.show()
+    def set_mode_flash(self,color) :
+        self.count=3
+        self.current_color=color
+        self.current_mode="flash"
+    def flash(self) :
+        self.count=self.count-1
+        for i in range(0,self.nb_of_leds) :
+            self.strip.setPixelColor(i,self.current_color)
+        if self.count<=0 :
+            self.current_mode=False
+
+#SPECIFIC ENGINE
+
+class Trash() :
+    def __init__(self,img,good_value,txt) :
+        self.img=img
+        self.good_value=good_value
+        self.txt=txt
+    def check_value(self,btn) :
+        if btn==self.good_value :
+            return True
+        else :
+            return False
+
+def new_trash() :
+    global CURRENT_TRASH
+    global TRASH_CHANGE_COUNTER
+    global TRASH_CHANGE
+    new=random.choice(trashs)
+    while new==CURRENT_TRASH :
+        new=random.choice(trashs)
+    CURRENT_TRASH=new
+    TRASH_CHANGE_COUNTER=TRASH_CHANGE
+    TRASH_CHANGE-=1
+
+def pressed(btn) :
+    global CURRENT_TRASH
+    global BTN_TIMEOUT_COUNTER
+    global ANIMATIONS
+    global LED_HANDLER
+    global TRASH_CHANGE_COUNTER
+    global SCORE
+    if BTN_TIMEOUT_COUNTER==0 :
+        BTN_TIMEOUT_COUNTER=BTN_TIMEOUT
+        if btn=="y" :
+            LED_HANDLER.set_mode_flash(LED_HANDLER.YELLOW)
+        if btn=="g" :
+            LED_HANDLER.set_mode_flash(LED_HANDLER.GREEN)
+        if btn=="b" :
+            LED_HANDLER.set_mode_flash(LED_HANDLER.BLUE)
+        if btn=="r" :
+            LED_HANDLER.set_mode_flash(LED_HANDLER.RED)
+        if btn=="p" :
+            LED_HANDLER.set_mode_flash(LED_HANDLER.PURPLE)
+        if CURRENT_TRASH.check_value(btn) :
+            ANIMATIONS.append(Pop(20,score_font.render("+1 !",1,BLUE,COLOR_BG),(800,450-225)))
+            SCORE+=1
+        else :
+            ANIMATIONS.append(Pop(20,score_font.render("-1 !",1,RED,COLOR_BG),(800,450-225)))
+            SCORE-=1
+        new_trash()
+
+def pressed_y(arg) :
+    pressed("y")
+    print("y")
+
+def pressed_g(arg) :
+    pressed("g")
+    print("g")
+
+def pressed_b(arg) :
+    pressed("b")
+    print("b")
+
+def pressed_r(arg) :
+    pressed("r")
+    print("r")
+
+def pressed_p(arg) :
+    pressed("p")
+    print("p")
+
 trashs=[
     Trash(y0,"y","Ceci est le déchet y0"),
     Trash(y1,"y","Ceci est le déchet y1"),
@@ -118,62 +233,45 @@ trashs=[
     Trash(b1,"b","Ceci est le déchet b1"),
 ]
 
-CURRENT_TRASH=trashs[0]
-TIMEOUT=0
-ANIMATIONS=[]
-LED_HANDLER=Leds(strip)
-
-def new_trash() :
-    global CURRENT_TRASH
-    new=random.choice(trashs)
-    while new==CURRENT_TRASH :
-        new=random.choice(trashs)
-    CURRENT_TRASH=new
-
-def pressed(btn) :
-    global CURRENT_TRASH
-    global TIMEOUT
-    global ANIMATIONS
-    global LED_HANDLER
-    if TIMEOUT==0 :
-        TIMEOUT=BTN_TIMEOUT
-        LED_HANDLER.count=20
-        if CURRENT_TRASH.check_value(btn) :
-            ANIMATIONS.append(Pop(15,debug_font.render("Gagné !",1,BLACK,COLOR_BG),(800,450-200)))
-        else :
-            ANIMATIONS.append(Pop(15,debug_font.render("Perdu !",1,BLACK,COLOR_BG),(800,450-200)))
-        new_trash()
-
-def pressed_y(arg) :
-    pressed("y")
-
-def pressed_g(arg) :
-    pressed("g")
-
-def pressed_b(arg) :
-    pressed("b")
-    
-    
-
-btn_y=gpio.Button(GPIO_y)
-btn_g=gpio.Button(GPIO_g)
-btn_b=gpio.Button(GPIO_b)
-
-btn_y.when_pressed = pressed_y
-btn_g.when_pressed = pressed_g
-btn_b.when_pressed = pressed_b
-
-
 #MAINLOOP PREPARATION
 on=True
 SCREEN = pygame.display.set_mode(SCREEN_SIZE,pygame.FULLSCREEN)
 CLOCK = pygame.time.Clock()
 
-#MAINLOOP
+#Initializing leds handler
+LED_HANDLER=Leds(GPIO_led,120)
+LED_HANDLER.test()
 
+#Initializing Engine constants
+CURRENT_TRASH=trashs[0]
+BTN_TIMEOUT_COUNTER=0
+TRASH_CHANGE_COUNTER=TRASH_CHANGE
+ANIMATIONS=[]
+SCORE=0
+
+#Connections buttons to methods
+btn_y=gpio.Button(GPIO_y)
+btn_g=gpio.Button(GPIO_g)
+btn_b=gpio.Button(GPIO_b)
+btn_r=gpio.Button(GPIO_r)
+btn_p=gpio.Button(GPIO_p)
+btn_y.when_pressed = pressed_y
+btn_g.when_pressed = pressed_g
+btn_b.when_pressed = pressed_b
+btn_r.when_pressed = pressed_r
+btn_p.when_pressed = pressed_p
+
+rad=6.28/TRASH_CHANGE
+
+
+#MAINLOOP
+SCREEN.fill(COLOR_BG)
 while on :
     #Cleaning of Screen
     SCREEN.fill(COLOR_BG)
+
+    #Add background
+    #center_blit(SCREEN,trash,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
 
     #Event handling
     for event in pygame.event.get():
@@ -183,27 +281,48 @@ while on :
         if keys[pygame.K_ESCAPE] : # ECHAP : Quitter
             on=False
 
+    #Show change countdown
+    pygame.draw.arc(SCREEN,BLACK,(SCREEN_SIZE[0]/2-190,SCREEN_SIZE[1]/2-190,380,380),1.5,1.5+TRASH_CHANGE_COUNTER*rad,20)
+
     #Show current trash
     center_blit(SCREEN,CURRENT_TRASH.img,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
 
-    if TIMEOUT>0 :
-        TIMEOUT-=1
+    #Show couvercle
+    pygame.draw.circle(SCREEN,BLACK,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2),180,int(TRASH_CHANGE_COUNTER*1.5))
+
+    #Show Score
+    center_blit(SCREEN,score_font.render("SCORE : "+str(SCORE),1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,100))
+
+    #Handle trash counter
+    if TRASH_CHANGE_COUNTER==0 :
+        ANIMATIONS.append(Pop(20,score_font.render("-1 !",1,RED,COLOR_BG),(800,450-225)))
+        SCORE-=1
+        new_trash()
+    else :
+        TRASH_CHANGE_COUNTER-=1
     
+    #Handle button timeout counter
+    if BTN_TIMEOUT_COUNTER>0 :
+        BTN_TIMEOUT_COUNTER-=1
+    
+    #Handle Animations
     for i,animation in enumerate(ANIMATIONS) :
         animation.anim()
         if animation.finished :
             ANIMATIONS.pop(i)
-
+    
+    #Handle Leds
     LED_HANDLER.step()
 
     #Show DEBUG
     if DEBUG :
         fps = str(round(CLOCK.get_fps(),1))
-        btns_status=f"y : {str(btn_y.is_pressed)}"+f" g : {str(btn_g.is_pressed)}"+f" b : {str(btn_b.is_pressed)}"+f" TIMEOUT : {str(TIMEOUT)}"+f" LED COUNT : {str(LED_HANDLER.count)}"
+        btns_status=f"y : {str(btn_y.is_pressed)}"+f" g : {str(btn_g.is_pressed)}"+f" b : {str(btn_b.is_pressed)}"+f"| TIMEOUT : {str(BTN_TIMEOUT_COUNTER)}"+f" | LED COUNT : {str(LED_HANDLER.count)}"+f" | CHANGE COUNTER : {str(TRASH_CHANGE_COUNTER)}"
         txt = "DEBUG MODE | FPS : "+fps+f" | Button values : {btns_status}"
-        to_blit=debug_font.render(txt,1,WHITE,COLOR_BG)
+        to_blit=debug_font.render(txt,1,BLACK,COLOR_BG)
         SCREEN.blit(to_blit,(0,0))
 
     #End of loop
-    pygame.display.flip()
+    #pygame.display.flip()
+    pygame.display.update()
     CLOCK.tick(FPS) 

@@ -69,6 +69,7 @@ score_font=pygame.font.Font('freesansbold.ttf',48)
 select = pygame.image.load(DIR+"assets/select.png").convert_alpha()
 trash = pygame.image.load(DIR+"assets/trash.png").convert_alpha()
 intro = pygame.image.load(DIR+"assets/intro.png").convert_alpha()
+panel = pygame.image.load(DIR+"assets/panel.png").convert_alpha()
 y0=pygame.image.load(DIR+"assets/y_0.png").convert_alpha()
 y1=pygame.image.load(DIR+"assets/y_1.png").convert_alpha()
 g0=pygame.image.load(DIR+"assets/g_0.png").convert_alpha()
@@ -186,14 +187,14 @@ class Trash() :
 def new_trash() :
     global CURRENT_TRASH
     global TRASH_CHANGE_COUNTER
-    global TRASH_CHANGE
+    global DIFFICULTY
     new=random.choice(trashs)
     while new==CURRENT_TRASH :
         new=random.choice(trashs)
     CURRENT_TRASH=new
-    TRASH_CHANGE_COUNTER=TRASH_CHANGE
+    TRASH_CHANGE_COUNTER=TRASH_CHANGE-DIFFICULTY
     if TRASH_CHANGE>3 :
-        TRASH_CHANGE-=1
+        DIFFICULTY+=1
 
 def pressed(btn) :
     global CURRENT_TRASH
@@ -202,6 +203,8 @@ def pressed(btn) :
     global LED_HANDLER
     global TRASH_CHANGE_COUNTER
     global SCORE
+    global GOOD
+    global BAD
     if BTN_TIMEOUT_COUNTER==0 :
         BTN_TIMEOUT_COUNTER=BTN_TIMEOUT
         if btn=="y" :
@@ -219,7 +222,7 @@ def pressed(btn) :
             GOOD+=1
         else :
             ANIMATIONS.append(Pop(20,score_font.render("-1 !",1,RED,COLOR_BG),(800,450-225)))
-            BAD-=1
+            BAD+=1
         new_trash()
 
 def pressed_y(arg) :
@@ -246,6 +249,8 @@ def pressed_start(arg) :
     global IDLE
     if IDLE :
         IDLE=False
+    if END :
+        reset()
     print("start")
 
 trashs=[
@@ -270,12 +275,38 @@ LED_HANDLER.test()
 CURRENT_TRASH=trashs[0]
 BTN_TIMEOUT_COUNTER=0
 TRASH_CHANGE_COUNTER=TRASH_CHANGE
+DIFFICULTY=0
 ANIMATIONS=[]
 SCORE=0
 GOOD=0
 BAD=0
 IDLE=True
 END=False
+BALLS=BB.BouncyBalls(SCREEN,FPS,radius=BALL_RADIUS)
+
+def reset() :
+    global CURRENT_TRASH
+    global BTN_TIMEOUT_COUNTER
+    global TRASH_CHANGE_COUNTER
+    global DIFFICULTY
+    global ANIMATIONS
+    global SCORE
+    global GOOD
+    global BAD
+    global IDLE
+    global END
+    global BALLS
+    CURRENT_TRASH=trashs[0]
+    BTN_TIMEOUT_COUNTER=0
+    TRASH_CHANGE_COUNTER=TRASH_CHANGE
+    DIFFICULTY=0
+    ANIMATIONS=[]
+    SCORE=0
+    GOOD=0
+    BAD=0
+    IDLE=True
+    END=False
+    BALLS=BB.BouncyBalls(SCREEN,FPS,radius=BALL_RADIUS)
 
 #Connections buttons to methods
 btn_y=gpio.Button(GPIO_y)
@@ -293,7 +324,7 @@ btn_start.when_pressed = pressed_start
 
 rad=6.28/TRASH_CHANGE
 
-BALLS=BB.BouncyBalls(SCREEN,FPS,radius=BALL_RADIUS)
+
 
 #MAINLOOP
 SCREEN.fill(COLOR_BG)
@@ -301,26 +332,28 @@ while on :
     #Cleaning of Screen
     SCREEN.fill(COLOR_BG)
 
+    #Event handling
+    for event in pygame.event.get():
+        keys = pygame.key.get_pressed()
+        if event.type == pygame.QUIT:
+            on = False
+        if keys[pygame.K_ESCAPE] : # ECHAP : Quitter
+            on=False
     if IDLE :
         center_blit(SCREEN,intro,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
         LED_HANDLER.step()
     elif END :
         center_blit(SCREEN,panel,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
-        center_blit(SCREEN,score_font.render("BRAVO !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,100))
-        center_blit(SCREEN,score_font.render("Tu as tenu "+str(round(SCORE/30))+" secondes !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2-400,300))
-        center_blit(SCREEN,score_font.render("Tu as trié "+str(GOOD)+" déchets !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2-400,400))
+        center_blit(SCREEN,score_font.render("BRAVO !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,250))
+        center_blit(SCREEN,score_font.render("Tu as tenu "+str(round(SCORE/30))+" secondes !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,400))
+        center_blit(SCREEN,score_font.render("Tu as trié "+str(GOOD)+" déchets !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,500))
+        center_blit(SCREEN,score_font.render("Pour recommencer, appuie sur le bouton jaune !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,600))
         LED_HANDLER.step()
     else :
         #Add background
         center_blit(SCREEN,trash,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
 
-        #Event handling
-        for event in pygame.event.get():
-            keys = pygame.key.get_pressed()
-            if event.type == pygame.QUIT:
-                on = False
-            if keys[pygame.K_ESCAPE] : # ECHAP : Quitter
-                on=False
+
 
         #Show change countdown
         pygame.draw.arc(SCREEN,BLACK,(SCREEN_SIZE[0]/2-190,SCREEN_SIZE[1]/2-190,380,380),1.5,1.5+TRASH_CHANGE_COUNTER*rad,20)
@@ -337,7 +370,7 @@ while on :
         #Handle trash counter
         if TRASH_CHANGE_COUNTER==0 :
             ANIMATIONS.append(Pop(20,score_font.render("-1 !",1,RED,COLOR_BG),(800,450-225)))
-            SCORE-=1
+            BAD+=1
             BALLS._create_ball(CURRENT_TRASH.ball)
             new_trash()
         else :
@@ -360,11 +393,13 @@ while on :
 
         if BAD>30 :
             END=True
+        
+        SCORE+=1
 
     #Show DEBUG
     if DEBUG :
         fps = str(round(CLOCK.get_fps(),1))
-        btns_status=f"y : {str(btn_y.is_pressed)}"+f" g : {str(btn_g.is_pressed)}"+f" b : {str(btn_b.is_pressed)}"+f"| TIMEOUT : {str(BTN_TIMEOUT_COUNTER)}"+f" | LED COUNT : {str(LED_HANDLER.count)}"+f" | CHANGE COUNTER : {str(TRASH_CHANGE_COUNTER)}"
+        btns_status=f"y : {str(btn_y.is_pressed)}"+f" g : {str(btn_g.is_pressed)}"+f" b : {str(btn_b.is_pressed)}"+f"| GOOD : {str(GOOD)}"+f" | BAD : {str(BAD)}"+f" | CHANGE COUNTER : {str(TRASH_CHANGE_COUNTER)}"
         txt = "DEBUG MODE | FPS : "+fps+f" | Button values : {btns_status}"
         to_blit=debug_font.render(txt,1,BLACK,COLOR_BG)
         SCREEN.blit(to_blit,(0,0))

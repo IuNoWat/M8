@@ -11,8 +11,7 @@ import rpi_ws281x as rpi
 import BB
 
 pygame.mixer.init()
-music=pygame.mixer.Sound("/home/pi/Desktop/dariane.mp3")
-music.play()
+
 
 from tools import *
 
@@ -66,16 +65,25 @@ debug_font=pygame.font.Font('freesansbold.ttf',14)
 score_font=pygame.font.Font('freesansbold.ttf',48)
 
 #ASSETS
-select = pygame.image.load(DIR+"assets/select.png").convert_alpha()
-trash = pygame.image.load(DIR+"assets/trash.png").convert_alpha()
-intro = pygame.image.load(DIR+"assets/intro.png").convert_alpha()
-panel = pygame.image.load(DIR+"assets/panel.png").convert_alpha()
-y0=pygame.image.load(DIR+"assets/y_0.png").convert_alpha()
-y1=pygame.image.load(DIR+"assets/y_1.png").convert_alpha()
-g0=pygame.image.load(DIR+"assets/g_0.png").convert_alpha()
-g1=pygame.image.load(DIR+"assets/g_1.png").convert_alpha()
-b0=pygame.image.load(DIR+"assets/b_1.png").convert_alpha()
-b1=pygame.image.load(DIR+"assets/b_0.png").convert_alpha()
+select = pygame.image.load(DIR+"assets/img/select.png").convert_alpha()
+trash = pygame.image.load(DIR+"assets/img/trash.png").convert_alpha()
+intro = pygame.image.load(DIR+"assets/img/intro.png").convert_alpha()
+panel = pygame.image.load(DIR+"assets/img/panel.png").convert_alpha()
+y0=pygame.image.load(DIR+"assets/img/y_0.png").convert_alpha()
+y1=pygame.image.load(DIR+"assets/img/y_1.png").convert_alpha()
+g0=pygame.image.load(DIR+"assets/img/g_0.png").convert_alpha()
+g1=pygame.image.load(DIR+"assets/img/g_1.png").convert_alpha()
+b0=pygame.image.load(DIR+"assets/img/b_1.png").convert_alpha()
+b1=pygame.image.load(DIR+"assets/img/b_0.png").convert_alpha()
+
+pop_1=pygame.mixer.Sound(DIR+"assets/sound/pop_1.mp3")
+pop_1=pygame.mixer.Sound(DIR+"assets/sound/pop_2.mp3")
+pop_1=pygame.mixer.Sound(DIR+"assets/sound/pop_3.mp3")
+short_good_1=pygame.mixer.Sound(DIR+"assets/sound/low_fb_pos.wav")
+shot_bad_1=pygame.mixer.Sound(DIR+"assets/sound/low_fb_neg.wav")
+long_good_1=pygame.mixer.Sound(DIR+"assets/sound/chord_fb_pos.wav")
+long_bad_1=pygame.mixer.Sound(DIR+"assets/sound/chord_fb_neg.wav")
+
 
 ball_y0=pygame.transform.scale(y0,(BALL_RADIUS*2,BALL_RADIUS*2))
 ball_y1=pygame.transform.scale(y1,(BALL_RADIUS*2,BALL_RADIUS*2))

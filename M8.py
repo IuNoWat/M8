@@ -2,8 +2,15 @@ import sys
 import random
 import time
 
+import os
+os.environ['SDL_AUDIODRIVER'] = 'alsa'
+
 import pygame
 pygame.font.init()
+#pygame.mixer.init()
+#music=pygame.mixer.Sound("/home/pi/Desktop/dariane.mp3")
+#music.play()
+
 
 import gpiozero as gpio
 import rpi_ws281x as rpi
@@ -31,12 +38,12 @@ LED_r=[53,54,55,56,57,58,59,60]
 LED_p=[67,68,69,70,71,72,73,74,75,76]
 
 #GPIO CONSTANTS
-GPIO_y="BOARD22"
-GPIO_g="BOARD18"
-GPIO_b="BOARD16"
+GPIO_y="BOARD18"
+GPIO_g="BOARD16"
+GPIO_b="BOARD22"
 GPIO_r="BOARD10" 
-GPIO_p="BOARD32"
-GPIO_start="BOARD8"
+GPIO_p="BOARD8"
+GPIO_start="BOARD32"
 GPIO_led=18
 
 #Engine CONSTANTS in frame
@@ -143,7 +150,7 @@ class Leds() :
                     pass
         self.strip.show()
     def set_mode_flash(self,color) :
-        self.count=3
+        self.count=5
         self.current_color=color
         self.current_mode="flash"
     def flash(self) :

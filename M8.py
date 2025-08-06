@@ -10,9 +10,9 @@ import rpi_ws281x as rpi
 
 import BB
 
-#pygame.mixer.init()
-#music=pygame.mixer.Sound("/home/pi/Desktop/dariane.mp3")
-#music.play()
+pygame.mixer.init()
+music=pygame.mixer.Sound("/home/pi/Desktop/dariane.mp3")
+music.play()
 
 from tools import *
 
@@ -125,6 +125,7 @@ class Leds() :
         self.BLUE=rpi.Color(0,0,255)
         self.YELLOW=rpi.Color(255,255,0)
         self.PURPLE=rpi.Color(255,0,255)
+        # Tests de marron self.PURPLE=rpi.Color(200,140,10)
         #Engine value
         self.current_mode=False
         self.count=0

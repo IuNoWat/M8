@@ -1,19 +1,18 @@
 import sys
 import random
 import time
-
 import os
-os.environ['SDL_AUDIODRIVER'] = 'alsa'
 
 import pygame
 pygame.font.init()
+import gpiozero as gpio
+import rpi_ws281x as rpi
+
+import BB
+
 #pygame.mixer.init()
 #music=pygame.mixer.Sound("/home/pi/Desktop/dariane.mp3")
 #music.play()
-
-
-import gpiozero as gpio
-import rpi_ws281x as rpi
 
 from tools import *
 
@@ -21,7 +20,9 @@ from tools import *
 FPS=30
 DIR="/home/pi/Desktop/M8/"
 SCREEN_SIZE=(1600, 900)
+SCREEN = pygame.display.set_mode(SCREEN_SIZE,pygame.FULLSCREEN)
 FULLSCREEN=True
+BALL_RADIUS=100
 
 #Define DEBUG
 try :
@@ -65,14 +66,21 @@ debug_font=pygame.font.Font('freesansbold.ttf',14)
 score_font=pygame.font.Font('freesansbold.ttf',48)
 
 #ASSETS
-select = pygame.image.load(DIR+"assets/select.png")
-trash = pygame.image.load(DIR+"assets/trash.png")
-y0=pygame.image.load(DIR+"assets/y_0.png")
-y1=pygame.image.load(DIR+"assets/y_1.png")
-g0=pygame.image.load(DIR+"assets/g_0.png")
-g1=pygame.image.load(DIR+"assets/g_1.png")
-b0=pygame.image.load(DIR+"assets/b_1.png")
-b1=pygame.image.load(DIR+"assets/b_0.png")
+select = pygame.image.load(DIR+"assets/select.png").convert_alpha()
+trash = pygame.image.load(DIR+"assets/trash.png").convert_alpha()
+y0=pygame.image.load(DIR+"assets/y_0.png").convert_alpha()
+y1=pygame.image.load(DIR+"assets/y_1.png").convert_alpha()
+g0=pygame.image.load(DIR+"assets/g_0.png").convert_alpha()
+g1=pygame.image.load(DIR+"assets/g_1.png").convert_alpha()
+b0=pygame.image.load(DIR+"assets/b_1.png").convert_alpha()
+b1=pygame.image.load(DIR+"assets/b_0.png").convert_alpha()
+
+ball_y0=pygame.transform.scale(y0,(BALL_RADIUS*2,BALL_RADIUS*2))
+ball_y1=pygame.transform.scale(y1,(BALL_RADIUS*2,BALL_RADIUS*2))
+ball_g0=pygame.transform.scale(g0,(BALL_RADIUS*2,BALL_RADIUS*2))
+ball_g1=pygame.transform.scale(g1,(BALL_RADIUS*2,BALL_RADIUS*2))
+ball_b0=pygame.transform.scale(b0,(BALL_RADIUS*2,BALL_RADIUS*2))
+ball_b1=pygame.transform.scale(b1,(BALL_RADIUS*2,BALL_RADIUS*2))
 
 #ENGINE
 
@@ -163,8 +171,9 @@ class Leds() :
 #SPECIFIC ENGINE
 
 class Trash() :
-    def __init__(self,img,good_value,txt) :
+    def __init__(self,img,ball,good_value,txt) :
         self.img=img
+        self.ball=ball
         self.good_value=good_value
         self.txt=txt
     def check_value(self,btn) :
@@ -232,17 +241,17 @@ def pressed_p(arg) :
     print("p")
 
 trashs=[
-    Trash(y0,"y","Ceci est le déchet y0"),
-    Trash(y1,"y","Ceci est le déchet y1"),
-    Trash(g0,"g","Ceci est le déchet g0"),
-    Trash(g1,"g","Ceci est le déchet g1"),
-    Trash(b0,"b","Ceci est le déchet b0"),
-    Trash(b1,"b","Ceci est le déchet b1"),
+    Trash(y0,ball_y0,"y","Ceci est le déchet y0"),
+    Trash(y1,ball_y1,"y","Ceci est le déchet y1"),
+    Trash(g0,ball_g0,"g","Ceci est le déchet g0"),
+    Trash(g1,ball_g1,"g","Ceci est le déchet g1"),
+    Trash(b0,ball_b0,"b","Ceci est le déchet b0"),
+    Trash(b1,ball_b1,"b","Ceci est le déchet b1"),
 ]
 
 #MAINLOOP PREPARATION
 on=True
-SCREEN = pygame.display.set_mode(SCREEN_SIZE,pygame.FULLSCREEN)
+
 CLOCK = pygame.time.Clock()
 
 #Initializing leds handler
@@ -255,6 +264,7 @@ BTN_TIMEOUT_COUNTER=0
 TRASH_CHANGE_COUNTER=TRASH_CHANGE
 ANIMATIONS=[]
 SCORE=0
+IDLE=True
 
 #Connections buttons to methods
 btn_y=gpio.Button(GPIO_y)
@@ -270,6 +280,7 @@ btn_p.when_pressed = pressed_p
 
 rad=6.28/TRASH_CHANGE
 
+BALLS=BB.BouncyBalls(SCREEN,FPS,radius=BALL_RADIUS)
 
 #MAINLOOP
 SCREEN.fill(COLOR_BG)
@@ -277,50 +288,56 @@ while on :
     #Cleaning of Screen
     SCREEN.fill(COLOR_BG)
 
-    #Add background
-    #center_blit(SCREEN,trash,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
-
-    #Event handling
-    for event in pygame.event.get():
-        keys = pygame.key.get_pressed()
-        if event.type == pygame.QUIT:
-            on = False
-        if keys[pygame.K_ESCAPE] : # ECHAP : Quitter
-            on=False
-
-    #Show change countdown
-    pygame.draw.arc(SCREEN,BLACK,(SCREEN_SIZE[0]/2-190,SCREEN_SIZE[1]/2-190,380,380),1.5,1.5+TRASH_CHANGE_COUNTER*rad,20)
-
-    #Show current trash
-    center_blit(SCREEN,CURRENT_TRASH.img,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
-
-    #Show couvercle
-    pygame.draw.circle(SCREEN,BLACK,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2),180,int(TRASH_CHANGE_COUNTER*1.5))
-
-    #Show Score
-    center_blit(SCREEN,score_font.render("SCORE : "+str(SCORE),1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,100))
-
-    #Handle trash counter
-    if TRASH_CHANGE_COUNTER==0 :
-        ANIMATIONS.append(Pop(20,score_font.render("-1 !",1,RED,COLOR_BG),(800,450-225)))
-        SCORE-=1
-        new_trash()
+    if IDLE :
+        center_blit(SCREEN,score_font.render("Bienvenue dans la manip M8 - Poubelle de l'expo MAISON",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,50))
     else :
-        TRASH_CHANGE_COUNTER-=1
-    
-    #Handle button timeout counter
-    if BTN_TIMEOUT_COUNTER>0 :
-        BTN_TIMEOUT_COUNTER-=1
-    
-    #Handle Animations
-    for i,animation in enumerate(ANIMATIONS) :
-        animation.anim()
-        if animation.finished :
-            ANIMATIONS.pop(i)
-    
-    #Handle Leds
-    LED_HANDLER.step()
+        #Add background
+        center_blit(SCREEN,trash,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
 
+        #Event handling
+        for event in pygame.event.get():
+            keys = pygame.key.get_pressed()
+            if event.type == pygame.QUIT:
+                on = False
+            if keys[pygame.K_ESCAPE] : # ECHAP : Quitter
+                on=False
+
+        #Show change countdown
+        pygame.draw.arc(SCREEN,BLACK,(SCREEN_SIZE[0]/2-190,SCREEN_SIZE[1]/2-190,380,380),1.5,1.5+TRASH_CHANGE_COUNTER*rad,20)
+
+        #Show current trash
+        center_blit(SCREEN,CURRENT_TRASH.img,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
+
+        #Show couvercle
+        #pygame.draw.circle(SCREEN,BLACK,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2),180,int(TRASH_CHANGE_COUNTER*1.5))
+
+        #Show Score
+        center_blit(SCREEN,score_font.render("SCORE : "+str(SCORE),1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,100))
+
+        #Handle trash counter
+        if TRASH_CHANGE_COUNTER==0 :
+            ANIMATIONS.append(Pop(20,score_font.render("-1 !",1,RED,COLOR_BG),(800,450-225)))
+            SCORE-=1
+            BALLS._create_ball(CURRENT_TRASH.ball)
+            new_trash()
+        else :
+            TRASH_CHANGE_COUNTER-=1
+
+        #Handle button timeout counter
+        if BTN_TIMEOUT_COUNTER>0 :
+            BTN_TIMEOUT_COUNTER-=1
+
+        #Handle Animations
+        for i,animation in enumerate(ANIMATIONS) :
+            animation.anim()
+            if animation.finished :
+                ANIMATIONS.pop(i)
+
+        #Handle Leds
+        LED_HANDLER.step()
+
+        BALLS.handle_balls(SCREEN)
+    
     #Show DEBUG
     if DEBUG :
         fps = str(round(CLOCK.get_fps(),1))

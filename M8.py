@@ -68,6 +68,7 @@ score_font=pygame.font.Font('freesansbold.ttf',48)
 #ASSETS
 select = pygame.image.load(DIR+"assets/select.png").convert_alpha()
 trash = pygame.image.load(DIR+"assets/trash.png").convert_alpha()
+intro = pygame.image.load(DIR+"assets/intro.png").convert_alpha()
 y0=pygame.image.load(DIR+"assets/y_0.png").convert_alpha()
 y1=pygame.image.load(DIR+"assets/y_1.png").convert_alpha()
 g0=pygame.image.load(DIR+"assets/g_0.png").convert_alpha()
@@ -191,7 +192,8 @@ def new_trash() :
         new=random.choice(trashs)
     CURRENT_TRASH=new
     TRASH_CHANGE_COUNTER=TRASH_CHANGE
-    TRASH_CHANGE-=1
+    if TRASH_CHANGE>3 :
+        TRASH_CHANGE-=1
 
 def pressed(btn) :
     global CURRENT_TRASH
@@ -214,10 +216,10 @@ def pressed(btn) :
             LED_HANDLER.set_mode_flash(LED_HANDLER.PURPLE)
         if CURRENT_TRASH.check_value(btn) :
             ANIMATIONS.append(Pop(20,score_font.render("+1 !",1,BLUE,COLOR_BG),(800,450-225)))
-            SCORE+=1
+            GOOD+=1
         else :
             ANIMATIONS.append(Pop(20,score_font.render("-1 !",1,RED,COLOR_BG),(800,450-225)))
-            SCORE-=1
+            BAD-=1
         new_trash()
 
 def pressed_y(arg) :
@@ -239,6 +241,12 @@ def pressed_r(arg) :
 def pressed_p(arg) :
     pressed("p")
     print("p")
+
+def pressed_start(arg) :
+    global IDLE
+    if IDLE :
+        IDLE=False
+    print("start")
 
 trashs=[
     Trash(y0,ball_y0,"y","Ceci est le déchet y0"),
@@ -264,7 +272,10 @@ BTN_TIMEOUT_COUNTER=0
 TRASH_CHANGE_COUNTER=TRASH_CHANGE
 ANIMATIONS=[]
 SCORE=0
+GOOD=0
+BAD=0
 IDLE=True
+END=False
 
 #Connections buttons to methods
 btn_y=gpio.Button(GPIO_y)
@@ -272,11 +283,13 @@ btn_g=gpio.Button(GPIO_g)
 btn_b=gpio.Button(GPIO_b)
 btn_r=gpio.Button(GPIO_r)
 btn_p=gpio.Button(GPIO_p)
+btn_start=gpio.Button(GPIO_start)
 btn_y.when_pressed = pressed_y
 btn_g.when_pressed = pressed_g
 btn_b.when_pressed = pressed_b
 btn_r.when_pressed = pressed_r
 btn_p.when_pressed = pressed_p
+btn_start.when_pressed = pressed_start
 
 rad=6.28/TRASH_CHANGE
 
@@ -289,7 +302,14 @@ while on :
     SCREEN.fill(COLOR_BG)
 
     if IDLE :
-        center_blit(SCREEN,score_font.render("Bienvenue dans la manip M8 - Poubelle de l'expo MAISON",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,50))
+        center_blit(SCREEN,intro,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
+        LED_HANDLER.step()
+    elif END :
+        center_blit(SCREEN,panel,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
+        center_blit(SCREEN,score_font.render("BRAVO !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,100))
+        center_blit(SCREEN,score_font.render("Tu as tenu "+str(round(SCORE/30))+" secondes !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2-400,300))
+        center_blit(SCREEN,score_font.render("Tu as trié "+str(GOOD)+" déchets !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2-400,400))
+        LED_HANDLER.step()
     else :
         #Add background
         center_blit(SCREEN,trash,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
@@ -337,7 +357,10 @@ while on :
         LED_HANDLER.step()
 
         BALLS.handle_balls(SCREEN)
-    
+
+        if BAD>30 :
+            END=True
+
     #Show DEBUG
     if DEBUG :
         fps = str(round(CLOCK.get_fps(),1))

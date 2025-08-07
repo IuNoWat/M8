@@ -4,16 +4,11 @@ import time
 import os
 
 import pygame
-
 import gpiozero as gpio
 import rpi_ws281x as rpi
 
-import BB
-
-pygame.mixer.init()
-
-
 from tools import *
+import BB
 
 #CONSTANTS
 FPS=30
@@ -85,6 +80,7 @@ ball_g1=pygame.transform.scale(g1,(BALL_RADIUS*2,BALL_RADIUS*2))
 ball_b0=pygame.transform.scale(b0,(BALL_RADIUS*2,BALL_RADIUS*2))
 ball_b1=pygame.transform.scale(b1,(BALL_RADIUS*2,BALL_RADIUS*2))
 #SOUND
+pygame.mixer.init()
 pop=[
     pygame.mixer.Sound(DIR+"assets/sound/pop_1.mp3"),
     pygame.mixer.Sound(DIR+"assets/sound/pop_2.mp3"),
@@ -95,12 +91,9 @@ short_bad_1=pygame.mixer.Sound(DIR+"assets/sound/low_fb_neg.wav")
 long_good_1=pygame.mixer.Sound(DIR+"assets/sound/chord_fb_pos.wav")
 long_bad_1=pygame.mixer.Sound(DIR+"assets/sound/chord_fb_neg.wav")
 
-
-
-
 #ENGINE
 
-class Anim() :
+class Anim() : #Base anim class, meant to be inherited. To define what the animation do, change the self.method variable
     def __init__(self,max_frame) :
         self.max_frame=max_frame
         self.current_frame=0
@@ -112,7 +105,7 @@ class Anim() :
         if self.current_frame==self.max_frame :
             self.finished=True
 
-class Pop(Anim) :
+class Pop(Anim) : #Example use of the Anim class, wich create an image that fade out until max_frame
     def moove(self,current_frame) :
         self.img.set_alpha(255-current_frame*12)
         center_blit(SCREEN,self.img,(self.pos[0],self.pos[1]-current_frame*3))
@@ -126,7 +119,7 @@ class Pop(Anim) :
         Anim.anim(self)
 
 #Led Handler
-class Leds() :
+class Leds() : # Class used to handle the ledstrip,
     def __init__(self,pin,nb_of_leds) :
         self.nb_of_leds=nb_of_leds
         self.strip=rpi.PixelStrip(nb_of_leds,pin)
@@ -144,7 +137,7 @@ class Leds() :
         self.current_mode=False
         self.count=0
         self.current_color=self.WHITE
-    def test(self) :
+    def test(self) : # To test the leds at the start of the program
         for i in range(0,self.nb_of_leds) :
             for j in range(0,self.nb_of_leds) :
                 self.strip.setPixelColor(j,self.BLACK)
@@ -163,7 +156,7 @@ class Leds() :
             self.strip.setPixelColor(i,self.RED)
         for i in LED_p :
             self.strip.setPixelColor(i,self.PURPLE)
-    def step(self) :
+    def step(self) : # Called each frame, use self.base_colors or loop through an aniamtion defined in self.current_mode
         for i in range(0,self.nb_of_leds) :
             self.strip.setPixelColor(i,self.BLACK)
             self.base_colors()
@@ -176,7 +169,7 @@ class Leds() :
                 case _ :
                     pass
         self.strip.show()
-    def set_mode_flash(self,color) :
+    def set_mode_flash(self,color) : #Launch the flash mode, a flash of a specified color
         self.count=3
         self.current_color=color
         self.current_mode="flash"
@@ -186,7 +179,7 @@ class Leds() :
             self.strip.setPixelColor(i,self.current_color)
         if self.count<=0 :
             self.current_mode=False
-    def set_mode_blink(self) :
+    def set_mode_blink(self) : # Launh the blink mode, make all the leds blink
         self.count=15
         self.current_mode="blink"
     def blink(self) :
@@ -202,7 +195,7 @@ class Leds() :
 
 #SPECIFIC ENGINE
 
-class Trash() :
+class Trash() : #Used to store all the informations needed for each trash
     def __init__(self,img,ball,good_value,txt) :
         self.img=img
         self.ball=ball
@@ -214,7 +207,7 @@ class Trash() :
         else :
             return False
 
-def new_trash() :
+def new_trash() : #Change current trash
     global CURRENT_TRASH
     global TRASH_CHANGE_COUNTER
     global DIFFICULTY
@@ -228,7 +221,7 @@ def new_trash() :
     if TRASH_CHANGE>3 :
         DIFFICULTY+=1
 
-def good() :
+def good() : # Called by the pressed() method when the good button was pressed
     global GOOD
     global ANIMATIONS
     global LED_HANDLER
@@ -238,36 +231,32 @@ def good() :
     GOOD+=1
     new_trash()
 
-def bad() :
+def bad() : # Called by the pressed() method when the bad button was pressed
     global BAD
     global ANIMATIONS
     global BALLS
     global LED_HANDLER
+    global GAME_STATUS
+    global PLAYING
     short_bad_1.play()
     LED_HANDLER.set_mode_blink()
     ANIMATIONS.append(Pop(20,score_font.render("-1 !",1,RED,COLOR_BG),(800,450-225)))
     BAD+=1
     BALLS._create_ball(CURRENT_TRASH.ball)
+    GAME_STATUS="PAUSE"
+    PLAYING=False
     new_trash()
 
-def pressed(btn) :
+def pressed(btn) : # Called by all the buttons except the start button, check if the answer is good or bad 
     global CURRENT_TRASH
     global BTN_TIMEOUT_COUNTER
-    global LED_HANDLER
-    global TRASH_CHANGE_COUNTER
-    global SCORE
-    global GAME_STATUS
-    global PLAYING
     random.choice(pop).play()
     if BTN_TIMEOUT_COUNTER==0 :
         BTN_TIMEOUT_COUNTER=BTN_TIMEOUT
         if CURRENT_TRASH.check_value(btn) :
             good()
         else :
-            bad()
-            GAME_STATUS="PAUSE"
-            PLAYING=False
-        
+            bad()        
 
 def pressed_y(arg) :
     pressed("y")
@@ -307,6 +296,7 @@ def pressed_start(arg) :
         case _ :
             print("start")
 
+# Loading all trash infromations in the trashs list
 trashs=[
     Trash(y0,ball_y0,"y","C'était dans la poubelle jaune !"),
     Trash(y1,ball_y1,"y","C'était dans la poubelle jaune !"),
@@ -318,7 +308,6 @@ trashs=[
 
 #MAINLOOP PREPARATION
 on=True
-
 CLOCK = pygame.time.Clock()
 
 #Initializing leds handler
@@ -338,8 +327,9 @@ BAD=0
 GAME_STATUS="IDLE"
 PLAYING=False
 BALLS=BB.BouncyBalls(SCREEN,FPS,radius=BALL_RADIUS)
+rad=6.28/TRASH_CHANGE
 
-def reset() :
+def reset() : # To reset thje game
     global CURRENT_TRASH
     global BTN_TIMEOUT_COUNTER
     global TRASH_CHANGE_COUNTER
@@ -377,10 +367,7 @@ btn_r.when_pressed = pressed_r
 btn_p.when_pressed = pressed_p
 btn_start.when_pressed = pressed_start
 
-rad=6.28/TRASH_CHANGE
-
-
-#MAINLOOP v2
+#MAINLOOP 
 while on :
     #Cleaning of Screen
     SCREEN.fill(COLOR_BG)
@@ -402,7 +389,7 @@ while on :
     #Trash
     center_blit(SCREEN,CURRENT_TRASH.img,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
 
-    #Show couvercle
+    #Couvercle
     pygame.draw.circle(SCREEN,BLACK,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2),180,int(TRASH_CHANGE_COUNTER*1.5))
 
     #Score
@@ -439,6 +426,7 @@ while on :
         
         #Update score (elapsed game time)
         SCORE+=1
+
     else :
         match GAME_STATUS :
             case "IDLE" :
@@ -454,6 +442,7 @@ while on :
                 center_blit(SCREEN,score_font.render("Tu as tenu "+str(round(SCORE/30))+" secondes !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,400))
                 center_blit(SCREEN,score_font.render("Tu as trié "+str(GOOD)+" déchets !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,500))
                 center_blit(SCREEN,score_font.render("Pour recommencer, appuie sur le bouton jaune !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,600))
+    
     #DEBUG
     if DEBUG :
         fps = str(round(CLOCK.get_fps(),1))
@@ -468,85 +457,3 @@ while on :
     CLOCK.tick(FPS)     
 
 
-##MAINLOOP
-#while on :
-#    #Cleaning of Screen
-#    SCREEN.fill(COLOR_BG)
-#
-#    #Event handling
-#    for event in pygame.event.get():
-#        keys = pygame.key.get_pressed()
-#        if event.type == pygame.QUIT:
-#            on = False
-#        if keys[pygame.K_ESCAPE] : # ECHAP : Quitter
-#            on=False
-#    if IDLE :
-#        center_blit(SCREEN,intro,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
-#        LED_HANDLER.step()
-#    elif END :
-#        center_blit(SCREEN,panel,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
-#        center_blit(SCREEN,score_font.render("BRAVO !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,250))
-#        center_blit(SCREEN,score_font.render("Tu as tenu "+str(round(SCORE/30))+" secondes !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,400))
-#        center_blit(SCREEN,score_font.render("Tu as trié "+str(GOOD)+" déchets !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,500))
-#        center_blit(SCREEN,score_font.render("Pour recommencer, appuie sur le bouton jaune !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,600))
-#        LED_HANDLER.step()
-#    else :
-#        #Add background
-#        center_blit(SCREEN,trash,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
-#
-#
-#
-#        #Show change countdown
-#        pygame.draw.arc(SCREEN,BLACK,(SCREEN_SIZE[0]/2-190,SCREEN_SIZE[1]/2-190,380,380),1.5,1.5+TRASH_CHANGE_COUNTER*rad,20)
-#
-#        #Show current trash
-#        center_blit(SCREEN,CURRENT_TRASH.img,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
-#
-#        #Show couvercle
-#        #pygame.draw.circle(SCREEN,BLACK,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2),180,int(TRASH_CHANGE_COUNTER*1.5))
-#
-#        #Show Score
-#        center_blit(SCREEN,score_font.render("SCORE : "+str(SCORE),1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,100))
-#
-#        #Handle trash counter
-#        if TRASH_CHANGE_COUNTER==0 :
-#            ANIMATIONS.append(Pop(20,score_font.render("-1 !",1,RED,COLOR_BG),(800,450-225)))
-#            BAD+=1
-#            BALLS._create_ball(CURRENT_TRASH.ball)
-#            new_trash()
-#        else :
-#            TRASH_CHANGE_COUNTER-=1
-#
-#        #Handle button timeout counter
-#        if BTN_TIMEOUT_COUNTER>0 :
-#            BTN_TIMEOUT_COUNTER-=1
-#
-#        #Handle Animations
-#        for i,animation in enumerate(ANIMATIONS) :
-#            animation.anim()
-#            if animation.finished :
-#                ANIMATIONS.pop(i)
-#
-#        #Handle Leds
-#        LED_HANDLER.step()
-#
-#        BALLS.handle_balls(SCREEN)
-#
-#        if BAD>30 :
-#            END=True
-#        
-#        SCORE+=1
-#
-#    #Show DEBUG
-#    if DEBUG :
-#        fps = str(round(CLOCK.get_fps(),1))
-#        btns_status=f"y : {str(btn_y.is_pressed)}"+f" g : {str(btn_g.is_pressed)}"+f" b : {str(btn_b.is_pressed)}"+f"| GOOD : {str(GOOD)}"+f" | BAD : {str(BAD)}"+f" | CHANGE COUNTER : {str(TRASH_CHANGE_COUNTER)}"
-#        txt = "DEBUG MODE | FPS : "+fps+f" | Button values : {btns_status} | GAME_STATUS : {GAME_STATUS}"
-#        to_blit=debug_font.render(txt,1,BLACK,COLOR_BG)
-#        SCREEN.blit(to_blit,(0,0))
-#
-#    #End of loop
-#    #pygame.display.flip()
-#    pygame.display.update()
-#    CLOCK.tick(FPS) 
-#

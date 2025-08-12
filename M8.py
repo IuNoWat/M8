@@ -16,7 +16,7 @@ DIR="/home/pi/Desktop/M8/"
 SCREEN_SIZE=(1600, 900)
 SCREEN = pygame.display.set_mode(SCREEN_SIZE,pygame.FULLSCREEN)
 FULLSCREEN=True
-BALL_RADIUS=100
+BALL_RADIUS=120
 
 #Define DEBUG
 try :
@@ -42,8 +42,8 @@ GPIO_start="BOARD32"
 GPIO_led=18
 
 #Engine CONSTANTS in frame
-BTN_TIMEOUT=10
-TRASH_CHANGE=90
+BTN_TIMEOUT=15
+TRASH_CHANGE=120
 
 #Animation CONSTANTS
 
@@ -115,7 +115,6 @@ class Pop(Anim) : #Example use of the Anim class, wich create an image that fade
         self.pos=pos
         self.method=self.moove
     def anim(self) :
-        print(self.current_frame)
         Anim.anim(self)
 
 #Led Handler
@@ -143,8 +142,10 @@ class Leds() : # Class used to handle the ledstrip,
                 self.strip.setPixelColor(j,self.BLACK)
             self.strip.setPixelColor(i,self.WHITE)
             self.strip.show()
-            print(i)
             time.sleep(0.01)
+        for j in range(0,self.nb_of_leds) :
+            self.strip.setPixelColor(j,self.BLACK)
+        self.strip.show()
     def base_colors(self) :
         for i in LED_y :
             self.strip.setPixelColor(i,self.YELLOW)
@@ -218,7 +219,7 @@ def new_trash() : #Change current trash
         new=random.choice(trashs)
     CURRENT_TRASH=new
     TRASH_CHANGE_COUNTER=TRASH_CHANGE-DIFFICULTY
-    if TRASH_CHANGE>3 :
+    if TRASH_CHANGE-DIFFICULTY>5 :
         DIFFICULTY+=1
 
 def good() : # Called by the pressed() method when the good button was pressed
@@ -236,27 +237,26 @@ def bad() : # Called by the pressed() method when the bad button was pressed
     global ANIMATIONS
     global BALLS
     global LED_HANDLER
-    global GAME_STATUS
-    global PLAYING
     short_bad_1.play()
     LED_HANDLER.set_mode_blink()
     ANIMATIONS.append(Pop(20,score_font.render("-1 !",1,RED,COLOR_BG),(800,450-225)))
     BAD+=1
     BALLS._create_ball(CURRENT_TRASH.ball)
-    GAME_STATUS="PAUSE"
-    PLAYING=False
     new_trash()
 
 def pressed(btn) : # Called by all the buttons except the start button, check if the answer is good or bad 
     global CURRENT_TRASH
-    global BTN_TIMEOUT_COUNTER
-    random.choice(pop).play()
-    if BTN_TIMEOUT_COUNTER==0 :
-        BTN_TIMEOUT_COUNTER=BTN_TIMEOUT
+    global GAME_STATUS
+    global PLAYING
+    if PLAYING :
+        print("COUCOU")
+        random.choice(pop).play()
         if CURRENT_TRASH.check_value(btn) :
             good()
         else :
-            bad()        
+            bad()
+            GAME_STATUS="PAUSE"
+            PLAYING=False
 
 def pressed_y(arg) :
     pressed("y")
@@ -281,6 +281,7 @@ def pressed_p(arg) :
 def pressed_start(arg) :
     global GAME_STATUS
     global PLAYING
+    print(f"Start - GAME_STATUS : {GAME_STATUS} - PLAYING : {str(PLAYING)}")
     random.choice(pop).play()
     match GAME_STATUS :
         case "IDLE" :
@@ -291,10 +292,8 @@ def pressed_start(arg) :
             GAME_STATUS="PLAY"
         case "END" :
             reset()
-            PLAYING=True
-            GAME_STATUS="PLAY"
         case _ :
-            print("start")
+            print(f"default : {str(GAME_STATUS)}")
 
 # Loading all trash infromations in the trashs list
 trashs=[
@@ -311,17 +310,17 @@ on=True
 CLOCK = pygame.time.Clock()
 
 #Initializing leds handler
-LED_HANDLER=Leds(GPIO_led,120)
+LED_HANDLER=Leds(GPIO_led,80)
 LED_HANDLER.test()
 
 #Initializing Engine constants
 OLD_TRASH=False
 CURRENT_TRASH=trashs[0]
-BTN_TIMEOUT_COUNTER=0
 TRASH_CHANGE_COUNTER=TRASH_CHANGE
 DIFFICULTY=0
 ANIMATIONS=[]
 SCORE=0
+VIES=10
 GOOD=0
 BAD=0
 GAME_STATUS="IDLE"
@@ -329,24 +328,24 @@ PLAYING=False
 BALLS=BB.BouncyBalls(SCREEN,FPS,radius=BALL_RADIUS)
 rad=6.28/TRASH_CHANGE
 
-def reset() : # To reset thje game
+def reset() : # To reset the game
     global CURRENT_TRASH
-    global BTN_TIMEOUT_COUNTER
     global TRASH_CHANGE_COUNTER
     global DIFFICULTY
     global ANIMATIONS
     global SCORE
+    global VIES
     global GOOD
     global BAD
     global GAME_STATUS
     global PLAYING
     global BALLS
     CURRENT_TRASH=trashs[0]
-    BTN_TIMEOUT_COUNTER=0
     TRASH_CHANGE_COUNTER=TRASH_CHANGE
     DIFFICULTY=0
     ANIMATIONS=[]
     SCORE=0
+    VIES=10
     GOOD=0
     BAD=0
     GAME_STATUS="IDLE"
@@ -354,12 +353,12 @@ def reset() : # To reset thje game
     BALLS=BB.BouncyBalls(SCREEN,FPS,radius=BALL_RADIUS)
 
 #Connections buttons to methods
-btn_y=gpio.Button(GPIO_y)
-btn_g=gpio.Button(GPIO_g)
-btn_b=gpio.Button(GPIO_b)
-btn_r=gpio.Button(GPIO_r)
-btn_p=gpio.Button(GPIO_p)
-btn_start=gpio.Button(GPIO_start)
+btn_y=gpio.Button(GPIO_y,pull_up=True,bounce_time=0.05)
+btn_g=gpio.Button(GPIO_g,pull_up=True,bounce_time=0.05)
+btn_b=gpio.Button(GPIO_b,pull_up=True,bounce_time=0.05)
+btn_r=gpio.Button(GPIO_r,pull_up=True,bounce_time=0.05)
+btn_p=gpio.Button(GPIO_p,pull_up=True,bounce_time=0.05)
+btn_start=gpio.Button(GPIO_start,pull_up=True,bounce_time=0.05)
 btn_y.when_pressed = pressed_y
 btn_g.when_pressed = pressed_g
 btn_b.when_pressed = pressed_b
@@ -369,6 +368,7 @@ btn_start.when_pressed = pressed_start
 
 #MAINLOOP 
 while on :
+    
     #Cleaning of Screen
     SCREEN.fill(COLOR_BG)
 
@@ -378,6 +378,7 @@ while on :
         if event.type == pygame.QUIT:
             on = False
         if keys[pygame.K_ESCAPE] : # ECHAP : Quitter
+            LED_HANDLER.test()
             on=False
     
     #Background
@@ -393,7 +394,7 @@ while on :
     pygame.draw.circle(SCREEN,BLACK,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2),180,int(TRASH_CHANGE_COUNTER*1.5))
 
     #Score
-    center_blit(SCREEN,score_font.render("SCORE : "+str(SCORE),1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,100))
+    center_blit(SCREEN,score_font.render(f"SCORE : {str(SCORE)} | VIES : {str(VIES-BAD)}",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,100))
 
     #Handle Leds
     LED_HANDLER.step()
@@ -406,10 +407,6 @@ while on :
         else :
             TRASH_CHANGE_COUNTER-=1
 
-        #Handle button timeout counter
-        if BTN_TIMEOUT_COUNTER>0 :
-            BTN_TIMEOUT_COUNTER-=1
-
         #Handle Animations
         for i,animation in enumerate(ANIMATIONS) :
             animation.anim()
@@ -420,7 +417,7 @@ while on :
         BALLS.handle_balls(SCREEN)
 
         #Check Defeat
-        if BAD>30 :
+        if BAD>10 :
             GAME_STATUS="END"
             PLAYING=False
         
@@ -446,10 +443,12 @@ while on :
     #DEBUG
     if DEBUG :
         fps = str(round(CLOCK.get_fps(),1))
-        btns_status=f"y : {str(btn_y.is_pressed)}"+f" g : {str(btn_g.is_pressed)}"+f" b : {str(btn_b.is_pressed)}"+f"| GOOD : {str(GOOD)}"+f" | BAD : {str(BAD)}"+f" | CHANGE COUNTER : {str(TRASH_CHANGE_COUNTER)}"
+        btns_status=f"y : {str(btn_y.is_pressed)}"+f" g : {str(btn_g.is_pressed)}"+f" b : {str(btn_b.is_pressed)}"+f" s : {str(btn_start.is_pressed)}"+f"| GOOD : {str(GOOD)}"+f" | BAD : {str(BAD)}"+f" | CHANGE COUNTER : {str(TRASH_CHANGE_COUNTER)}"
         txt = "DEBUG MODE | FPS : "+fps+f" | Button values : {btns_status} | GAME_STATUS : {GAME_STATUS}"
         to_blit=debug_font.render(txt,1,BLACK,COLOR_BG)
         SCREEN.blit(to_blit,(0,0))
+
+    print(f"{txt}")
 
     #End of loop
     #pygame.display.flip()

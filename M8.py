@@ -448,7 +448,6 @@ while on :
         to_blit=debug_font.render(txt,1,BLACK,COLOR_BG)
         SCREEN.blit(to_blit,(0,0))
 
-    print(f"{txt}")
 
     #End of loop
     #pygame.display.flip()

@@ -74,19 +74,20 @@ class BouncyBalls(object):
         #    pymunk.Segment(static_body, (size[0], size[1]), (size[0], 0), 0.0)          
         #]
 
+        #static_lines = [
+        #    pymunk.Segment(static_body, (400, 0), (400, size[1]), 0.0),
+        #    pymunk.Segment(static_body, (400, size[1]), (600, size[1]), 0.0),
+        #    pymunk.Segment(static_body, (600, size[1]), (600, 0), 0.0)          
+        #]
+        
         static_lines = [
-            pymunk.Segment(static_body, (400, 0), (400, size[1]), 0.0),
-            pymunk.Segment(static_body, (400, size[1]), (600, size[1]), 0.0),
-            pymunk.Segment(static_body, (600, size[1]), (600, 0), 0.0)          
-        ]
-        static_lines = [
-            pymunk.Segment(static_body, (490, 800), (490, 1172), 0.0),
+            pymunk.Segment(static_body, (490, 839), (490, 1172), 0.0),
             pymunk.Segment(static_body, (490, 1172), (340,1321), 0.0),
             pymunk.Segment(static_body, (340,1321), (340, 1720), 0.0),
             pymunk.Segment(static_body, (340,1720), (740, 1720), 0.0),
             pymunk.Segment(static_body, (740, 1720), (740, 1321), 0.0),
             pymunk.Segment(static_body, (740, 1321), (590, 1172), 0.0),
-            pymunk.Segment(static_body, (590, 1172), (590, 800), 0.0),   
+            pymunk.Segment(static_body, (590, 1172), (590, 839), 0.0),   
         ]
 
         for line in static_lines:
@@ -102,7 +103,7 @@ class BouncyBalls(object):
         mass = self.ball_mass
         inertia = pymunk.moment_for_circle(mass, 0, self.radius, (0, 0))
         body = pymunk.Body(mass, inertia)
-        body.position = pos[0]+random.randint(-25,25),pos[1]
+        body.position = pos[0]+random.randint(-5,5),pos[1]
         shape = pymunk.Circle(body, self.radius, (0, 0))
         shape.elasticity = self.ball_elasticity
         shape.friction = self.shape_friction

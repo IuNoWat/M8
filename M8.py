@@ -39,8 +39,8 @@ corress_btn = {
 #STYLE CONSTANTS
 
 #BALL
-ball_mass = 5
-ball_elasticity = 0.7
+ball_mass = 10
+ball_elasticity = 0.5
 shape_friction = 0.9
 
 #GPIO CONSTANTS
@@ -63,7 +63,14 @@ LED_r=[53,54,55,56,57,58,59,60]
 LED_p=[67,68,69,70,71,72,73,74,75,76]
 
 #Animation CONSTANTS
-
+color_directions = {
+    "dechet":(0,1000),
+    "jaune":(0,-50),
+    "orange":(50,-22),
+    "vert":(50,50),
+    "gris":(-50,50),
+    "marron":(-50,-22)
+}
 
 
 
@@ -286,6 +293,7 @@ def good() : # Called by the pressed() method when the good button was pressed
     short_good_1.play()
     LED_HANDLER.set_mode_flash(LED_HANDLER.WHITE)
     ANIMATIONS.append(Pop(20,score_font.render("+1 !",1,BLUE,COLOR_BG),(800,450-225)))
+    ANIMATIONS.append(Dash(20,CURRENT_TRASH.ball,TRASH_POS,color_directions[CURRENT_TRASH.good_value]))
     GOOD+=1
     new_trash()
 
@@ -297,7 +305,6 @@ def bad() : # Called by the pressed() method when the bad button was pressed
     short_bad_1.play()
     LED_HANDLER.set_mode_blink()
     ANIMATIONS.append(Pop(20,score_font.render("-1 !",1,RED,COLOR_BG),(800,450-225)))
-    ANIMATIONS.append(Dash(20,CURRENT_TRASH.img,TRASH_POS,(50,75)))
     BAD+=1
     BALLS._create_ball(CURRENT_TRASH.ball,TRASH_POS)
     new_trash()

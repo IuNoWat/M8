@@ -55,13 +55,6 @@ GPIO_btn_0="BOARD18"
 
 GPIO_led=18
 
-#LED CONSTANTS
-LED_y=[0,1,2,3,4,5,6,7,8]
-LED_g=[14,15,16,17,18,19,20,21,22]
-LED_b=[34,35,36,37,38,39,40,41,42,43]
-LED_r=[53,54,55,56,57,58,59,60]
-LED_p=[67,68,69,70,71,72,73,74,75,76]
-
 #Animation CONSTANTS
 color_directions = {
     "dechet":(0,1000),
@@ -71,9 +64,6 @@ color_directions = {
     "gris":(-50,50),
     "marron":(-50,-22)
 }
-
-
-
 
 #STYLE
 pygame.font.init()
@@ -188,43 +178,53 @@ class Leds() : # Class used to handle the ledstrip,
         self.strip=rpi.PixelStrip(nb_of_leds,pin)
         self.strip.begin()
         #Colors
-        self.WHITE=rpi.Color(255,255,255)
-        self.BLACK=rpi.Color(0,0,0)
+
         self.RED=rpi.Color(255,0,0)
-        self.GREEN=rpi.Color(0,255,0)
         self.BLUE=rpi.Color(0,0,255)
-        self.YELLOW=rpi.Color(255,255,0)
         self.PURPLE=rpi.Color(255,0,255)
-        # Tests de marron self.PURPLE=rpi.Color(200,140,10)
+        self.WHITE=rpi.Color(150,150,150)
+        self.BLACK=rpi.Color(0,0,0)
+        self.YELLOW=rpi.Color(255,255,0)
+        self.ORANGE=rpi.Color(255,255,50)
+        self.GREEN=rpi.Color(0,255,0)
+        self.GRIS=rpi.Color(50,50,50)
+        self.MARRON=rpi.Color(255,255,150)
+
         #Engine value
         self.current_mode=False
         self.count=0
         self.current_color=self.WHITE
+    def color_to_led(self,color) :
+        match color :
+            case "dechet" :
+                return self.WHITE
+            case "jaune" :
+                return self.YELLOW
+            case "orange" :
+                return self.ORANGE
+            case "vert" :
+                return self.GREEN
+            case "gris" :
+                return self.GRIS
+            case "marron" :
+                return self.MARRON
     def test(self) : # To test the leds at the start of the program
         for i in range(0,self.nb_of_leds) :
             for j in range(0,self.nb_of_leds) :
                 self.strip.setPixelColor(j,self.BLACK)
             self.strip.setPixelColor(i,self.WHITE)
             self.strip.show()
-            time.sleep(0.01)
+            time.sleep(0.1)
         for j in range(0,self.nb_of_leds) :
             self.strip.setPixelColor(j,self.BLACK)
         self.strip.show()
-    def base_colors(self) :
-        for i in LED_y :
-            self.strip.setPixelColor(i,self.YELLOW)
-        for i in LED_g :
-            self.strip.setPixelColor(i,self.GREEN)
-        for i in LED_b :
-            self.strip.setPixelColor(i,self.BLUE)
-        for i in LED_r :
-            self.strip.setPixelColor(i,self.RED)
-        for i in LED_p :
-            self.strip.setPixelColor(i,self.PURPLE)
+    def base(self) :
+        for i in range(0,self.nb_of_leds) :
+            self.strip.setPixelColor(i,self.WHITE)
     def step(self) : # Called each frame, use self.base_colors or loop through an aniamtion defined in self.current_mode
         for i in range(0,self.nb_of_leds) :
             self.strip.setPixelColor(i,self.BLACK)
-            self.base_colors()
+            self.base()
         if self.current_mode!=False :
             match self.current_mode :
                 case "flash" :
@@ -235,8 +235,8 @@ class Leds() : # Class used to handle the ledstrip,
                     pass
         self.strip.show()
     def set_mode_flash(self,color) : #Launch the flash mode, a flash of a specified color
-        self.count=3
-        self.current_color=color
+        self.count=5
+        self.current_color=self.color_to_led(color)
         self.current_mode="flash"
     def flash(self) :
         self.count=self.count-1
@@ -250,13 +250,17 @@ class Leds() : # Class used to handle the ledstrip,
     def blink(self) :
         self.count=self.count-1
         if self.count%3==0 :
-            self.base_colors()
-        else :
             for i in range(0,self.nb_of_leds) :
                 self.strip.setPixelColor(i,self.BLACK)
-            
+        else :
+            for i in range(0,self.nb_of_leds) :
+                self.strip.setPixelColor(i,self.RED)
         if self.count<=0 :
             self.current_mode=False
+    def close(self) :
+        for i in range(0,self.nb_of_leds) :
+            self.strip.setPixelColor(i,self.BLACK)
+        self.strip.show()
 
 #SPECIFIC ENGINE
 
@@ -291,7 +295,7 @@ def good() : # Called by the pressed() method when the good button was pressed
     global ANIMATIONS
     global LED_HANDLER
     short_good_1.play()
-    LED_HANDLER.set_mode_flash(LED_HANDLER.WHITE)
+    LED_HANDLER.set_mode_flash(CURRENT_TRASH.good_value)
     ANIMATIONS.append(Pop(20,score_font.render("+1 !",1,BLUE,COLOR_BG),(800,450-225)))
     ANIMATIONS.append(Dash(20,CURRENT_TRASH.ball,TRASH_POS,color_directions[CURRENT_TRASH.good_value]))
     GOOD+=1
@@ -384,12 +388,11 @@ on=True
 CLOCK = pygame.time.Clock()
 
 #Initializing leds handler
-LED_HANDLER=Leds(GPIO_led,80)
+LED_HANDLER=Leds(GPIO_led,22)
 LED_HANDLER.test()
 
 
 rad=6.28/TRASH_CHANGE
-
 
 #Initialize or reset the Game
 def reset() : # To reset the game
@@ -442,7 +445,6 @@ while on :
         if event.type == pygame.QUIT:
             on = False
         if keys[pygame.K_ESCAPE] : # ECHAP : Quitter
-            LED_HANDLER.test()
             on=False
     
     #Background
@@ -518,4 +520,4 @@ while on :
     pygame.display.update()
     CLOCK.tick(FPS)     
 
-
+LED_HANDLER.close()

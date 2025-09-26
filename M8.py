@@ -109,6 +109,8 @@ short_bad_1=pygame.mixer.Sound(DIR+"assets/sound/low_fb_neg.wav")
 long_good_1=pygame.mixer.Sound(DIR+"assets/sound/chord_fb_pos.wav")
 long_bad_1=pygame.mixer.Sound(DIR+"assets/sound/chord_fb_neg.wav")
 
+pygame.mixer.music.load(DIR+"assets/sound/music.mp3")
+pygame.mixer.music.play()
 #DATA
 
 trash_data = [

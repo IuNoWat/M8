@@ -10,9 +10,17 @@ import pymunk
 import pymunk.pygame_util
 from pymunk import Vec2d
 
+
+
 class BouncyBalls(object):
 
-    def __init__(self,SCREEN,FPS,radius=100) -> None:
+    def __init__(self,SCREEN,FPS,ball_radius = 50,ball_mass = 5,ball_elasticity = 0.7,shape_friction = 0.9) -> None:
+        #Import config
+        self.radius=ball_radius
+        self.ball_mass = ball_mass
+        self.ball_elasticity = ball_elasticity
+        self.shape_friction = shape_friction
+
         # Space
         self._space = pymunk.Space()
         self._space.gravity = (0.0, 1500.0)
@@ -35,7 +43,7 @@ class BouncyBalls(object):
         self._balls: list[pymunk.Circle] = []
 
         # Ball
-        self.radius=radius
+        
 
     def handle_balls(self,SCREEN) :
         for x in range(self._physics_steps_per_frame):
@@ -69,22 +77,20 @@ class BouncyBalls(object):
             line.friction = 0.9
         self._space.add(*static_lines)
 
-    def _create_ball(self,img_ball) -> None:
+    def _create_ball(self,img_ball,pos) -> None:
         """
         Create a ball.
         :return:
         """
-        mass = 5
+        mass = self.ball_mass
         inertia = pymunk.moment_for_circle(mass, 0, self.radius, (0, 0))
         body = pymunk.Body(mass, inertia)
-        x = random.randint(780, 820)
-        body.position = x, 450
+        body.position = pos[0]+random.randint(-25,25),pos[1]
         shape = pymunk.Circle(body, self.radius, (0, 0))
-        shape.elasticity = 0.7
-        shape.friction = 0.9
+        shape.elasticity = self.ball_elasticity
+        shape.friction = self.shape_friction
         shape.img_ball=img_ball
         self._space.add(body, shape)
         self._balls.append(shape)
-
 
         

@@ -13,11 +13,8 @@ import BB
 #CONSTANTS
 FPS=30
 DIR="/home/pi/Desktop/M8/"
-SCREEN_SIZE=(1600, 900)
+SCREEN_SIZE=(1080, 1920)
 SCREEN = pygame.display.set_mode(SCREEN_SIZE,pygame.FULLSCREEN)
-FULLSCREEN=True
-BALL_RADIUS=120
-
 #Define DEBUG
 try :
     if sys.argv[1]=="debug" :
@@ -25,25 +22,45 @@ try :
 except IndexError :
     DEBUG=False
 
+#GAME CONSTANTS
+BALL_RADIUS = 150
+TRASH_CHANGE=4*FPS
+BTN_TIMEOUT=0.5*FPS
+
+corress_btn = {
+    "0":"dechet",
+    "1":"jaune",
+    "2":"orange",
+    "3":"vert",
+    "4":"gris",
+    "5":"marron"
+}
+
+#STYLE CONSTANTS
+
+#BALL
+ball_mass = 5
+ball_elasticity = 0.7
+shape_friction = 0.9
+
+#GPIO CONSTANTS
+
+GPIO_btn_1="BOARD22"
+GPIO_btn_2="BOARD8"
+GPIO_btn_3="BOARD32"
+GPIO_btn_4="BOARD16"
+GPIO_btn_5="BOARD10"
+
+GPIO_btn_0="BOARD18"
+
+GPIO_led=18
+
 #LED CONSTANTS
 LED_y=[0,1,2,3,4,5,6,7,8]
 LED_g=[14,15,16,17,18,19,20,21,22]
 LED_b=[34,35,36,37,38,39,40,41,42,43]
 LED_r=[53,54,55,56,57,58,59,60]
 LED_p=[67,68,69,70,71,72,73,74,75,76]
-
-#GPIO CONSTANTS
-GPIO_y="BOARD18"
-GPIO_g="BOARD16"
-GPIO_b="BOARD22"
-GPIO_r="BOARD10" 
-GPIO_p="BOARD8"
-GPIO_start="BOARD32"
-GPIO_led=18
-
-#Engine CONSTANTS in frame
-BTN_TIMEOUT=15
-TRASH_CHANGE=120
 
 #Animation CONSTANTS
 
@@ -66,6 +83,7 @@ select = pygame.image.load(DIR+"assets/img/select.png").convert_alpha()
 trash = pygame.image.load(DIR+"assets/img/trash.png").convert_alpha()
 intro = pygame.image.load(DIR+"assets/img/intro.png").convert_alpha()
 panel = pygame.image.load(DIR+"assets/img/panel.png").convert_alpha()
+
 y0=pygame.image.load(DIR+"assets/img/y_0.png").convert_alpha()
 y1=pygame.image.load(DIR+"assets/img/y_1.png").convert_alpha()
 g0=pygame.image.load(DIR+"assets/img/g_0.png").convert_alpha()
@@ -90,6 +108,22 @@ short_good_1=pygame.mixer.Sound(DIR+"assets/sound/low_fb_pos.wav")
 short_bad_1=pygame.mixer.Sound(DIR+"assets/sound/low_fb_neg.wav")
 long_good_1=pygame.mixer.Sound(DIR+"assets/sound/chord_fb_pos.wav")
 long_bad_1=pygame.mixer.Sound(DIR+"assets/sound/chord_fb_neg.wav")
+
+#DATA
+
+trash_data = [
+    {
+        "img":y0,
+        "ball":ball_y0,
+        "good_value":"jaune",
+        "txt":"C'était dans la poubelle jaune !"
+    },
+    {"img":y1,"ball":ball_y1,"good_value":"jaune","txt":"C'était dans la poubelle jaune !"},
+    {"img":g0,"ball":ball_g0,"good_value":"vert","txt":"C'était dans la poubelle verte !"},
+    {"img":g1,"ball":ball_g1,"good_value":"vert","txt":"C'était dans la poubelle verte !"},
+    {"img":b0,"ball":ball_b0,"good_value":"gris","txt":"C'était dans la poubelle bleue !"},
+    {"img":b1,"ball":ball_b1,"good_value":"gris","txt":"C'était dans la poubelle bleue !"}
+]
 
 #ENGINE
 
@@ -197,13 +231,13 @@ class Leds() : # Class used to handle the ledstrip,
 #SPECIFIC ENGINE
 
 class Trash() : #Used to store all the informations needed for each trash
-    def __init__(self,img,ball,good_value,txt) :
-        self.img=img
-        self.ball=ball
-        self.good_value=good_value
-        self.txt=txt
+    def __init__(self,data) :
+        self.img=data["img"]
+        self.ball=data["ball"]
+        self.good_value=data["good_value"]
+        self.txt=data["txt"]
     def check_value(self,btn) :
-        if btn==self.good_value :
+        if corress_btn[btn]==self.good_value :
             return True
         else :
             return False
@@ -241,7 +275,7 @@ def bad() : # Called by the pressed() method when the bad button was pressed
     LED_HANDLER.set_mode_blink()
     ANIMATIONS.append(Pop(20,score_font.render("-1 !",1,RED,COLOR_BG),(800,450-225)))
     BAD+=1
-    BALLS._create_ball(CURRENT_TRASH.ball)
+    BALLS._create_ball(CURRENT_TRASH.ball,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
     new_trash()
 
 def pressed(btn) : # Called by all the buttons except the start button, check if the answer is good or bad 
@@ -258,30 +292,29 @@ def pressed(btn) : # Called by all the buttons except the start button, check if
             GAME_STATUS="PAUSE"
             PLAYING=False
 
-def pressed_y(arg) :
-    pressed("y")
-    print("y")
+def pressed_1(arg) :
+    pressed("1")
+    print("btn_1 pressed")
 
-def pressed_g(arg) :
-    pressed("g")
-    print("g")
+def pressed_2(arg) :
+    pressed("2")
+    print("btn_2 pressed")
 
-def pressed_b(arg) :
-    pressed("b")
-    print("b")
+def pressed_3(arg) :
+    pressed("3")
+    print("btn_3 pressed")
 
-def pressed_r(arg) :
-    pressed("r")
-    print("r")
+def pressed_4(arg) :
+    pressed("4")
+    print("btn_4 pressed")
 
-def pressed_p(arg) :
-    pressed("p")
-    print("p")
+def pressed_5(arg) :
+    pressed("5")
+    print("btn_5 pressed")
 
 def pressed_start(arg) :
     global GAME_STATUS
     global PLAYING
-    print(f"Start - GAME_STATUS : {GAME_STATUS} - PLAYING : {str(PLAYING)}")
     random.choice(pop).play()
     match GAME_STATUS :
         case "IDLE" :
@@ -296,14 +329,25 @@ def pressed_start(arg) :
             print(f"default : {str(GAME_STATUS)}")
 
 # Loading all trash infromations in the trashs list
-trashs=[
-    Trash(y0,ball_y0,"y","C'était dans la poubelle jaune !"),
-    Trash(y1,ball_y1,"y","C'était dans la poubelle jaune !"),
-    Trash(g0,ball_g0,"g","C'était dans la poubelle verte !"),
-    Trash(g1,ball_g1,"g","C'était dans la poubelle verte !"),
-    Trash(b0,ball_b0,"b","C'était dans la poubelle bleue !"),
-    Trash(b1,ball_b1,"b","C'était dans la poubelle bleue !"),
-]
+trashs=[]
+
+for entry in trash_data :
+    trashs.append(Trash(entry))
+
+
+#Connections buttons to methods
+btn_1=gpio.Button(GPIO_btn_1,pull_up=True,bounce_time=0.05)
+btn_2=gpio.Button(GPIO_btn_2,pull_up=True,bounce_time=0.05)
+btn_3=gpio.Button(GPIO_btn_3,pull_up=True,bounce_time=0.05)
+btn_4=gpio.Button(GPIO_btn_4,pull_up=True,bounce_time=0.05)
+btn_5=gpio.Button(GPIO_btn_5,pull_up=True,bounce_time=0.05)
+btn_0=gpio.Button(GPIO_btn_0,pull_up=True,bounce_time=0.05)
+btn_1.when_pressed = pressed_1
+btn_2.when_pressed = pressed_2
+btn_3.when_pressed = pressed_3
+btn_4.when_pressed = pressed_4
+btn_5.when_pressed = pressed_5
+btn_0.when_pressed = pressed_start
 
 #MAINLOOP PREPARATION
 on=True
@@ -313,22 +357,13 @@ CLOCK = pygame.time.Clock()
 LED_HANDLER=Leds(GPIO_led,80)
 LED_HANDLER.test()
 
-#Initializing Engine constants
-OLD_TRASH=False
-CURRENT_TRASH=trashs[0]
-TRASH_CHANGE_COUNTER=TRASH_CHANGE
-DIFFICULTY=0
-ANIMATIONS=[]
-SCORE=0
-VIES=10
-GOOD=0
-BAD=0
-GAME_STATUS="IDLE"
-PLAYING=False
-BALLS=BB.BouncyBalls(SCREEN,FPS,radius=BALL_RADIUS)
+
 rad=6.28/TRASH_CHANGE
 
+
+#Initialize or reset the Game
 def reset() : # To reset the game
+    global OLD_TRASH
     global CURRENT_TRASH
     global TRASH_CHANGE_COUNTER
     global DIFFICULTY
@@ -340,6 +375,7 @@ def reset() : # To reset the game
     global GAME_STATUS
     global PLAYING
     global BALLS
+    OLD_TRASH=False
     CURRENT_TRASH=trashs[0]
     TRASH_CHANGE_COUNTER=TRASH_CHANGE
     DIFFICULTY=0
@@ -350,21 +386,18 @@ def reset() : # To reset the game
     BAD=0
     GAME_STATUS="IDLE"
     PLAYING=False
-    BALLS=BB.BouncyBalls(SCREEN,FPS,radius=BALL_RADIUS)
+    BALLS=BB.BouncyBalls(
+        SCREEN,
+        FPS,
+        BALL_RADIUS,
+        ball_mass,
+        ball_elasticity,
+        shape_friction
+    )
 
-#Connections buttons to methods
-btn_y=gpio.Button(GPIO_y,pull_up=True,bounce_time=0.05)
-btn_g=gpio.Button(GPIO_g,pull_up=True,bounce_time=0.05)
-btn_b=gpio.Button(GPIO_b,pull_up=True,bounce_time=0.05)
-btn_r=gpio.Button(GPIO_r,pull_up=True,bounce_time=0.05)
-btn_p=gpio.Button(GPIO_p,pull_up=True,bounce_time=0.05)
-btn_start=gpio.Button(GPIO_start,pull_up=True,bounce_time=0.05)
-btn_y.when_pressed = pressed_y
-btn_g.when_pressed = pressed_g
-btn_b.when_pressed = pressed_b
-btn_r.when_pressed = pressed_r
-btn_p.when_pressed = pressed_p
-btn_start.when_pressed = pressed_start
+reset()
+
+
 
 #MAINLOOP 
 while on :
@@ -443,7 +476,7 @@ while on :
     #DEBUG
     if DEBUG :
         fps = str(round(CLOCK.get_fps(),1))
-        btns_status=f"y : {str(btn_y.is_pressed)}"+f" g : {str(btn_g.is_pressed)}"+f" b : {str(btn_b.is_pressed)}"+f" s : {str(btn_start.is_pressed)}"+f"| GOOD : {str(GOOD)}"+f" | BAD : {str(BAD)}"+f" | CHANGE COUNTER : {str(TRASH_CHANGE_COUNTER)}"
+        btns_status=f"1 : {str(btn_1.is_pressed)}"+f" 2 : {str(btn_2.is_pressed)}"+f" 3 : {str(btn_3.is_pressed)}"+f" 4 : {str(btn_4.is_pressed)}"+f" 5 : {str(btn_5.is_pressed)}"+f" 0 : {str(btn_0.is_pressed)}"+f"| GOOD : {str(GOOD)}"+f" | BAD : {str(BAD)}"+f" | CHANGE COUNTER : {str(TRASH_CHANGE_COUNTER)}"
         txt = "DEBUG MODE | FPS : "+fps+f" | Button values : {btns_status} | GAME_STATUS : {GAME_STATUS}"
         to_blit=debug_font.render(txt,1,BLACK,COLOR_BG)
         SCREEN.blit(to_blit,(0,0))

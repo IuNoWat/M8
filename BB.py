@@ -67,11 +67,28 @@ class BouncyBalls(object):
         size=SCREEN.get_size()
 
         static_body = self._space.static_body
+
+        #static_lines = [
+        #    pymunk.Segment(static_body, (0, 0), (0, size[1]), 0.0),
+        #    pymunk.Segment(static_body, (0, size[1]), (size[0], size[1]), 0.0),
+        #    pymunk.Segment(static_body, (size[0], size[1]), (size[0], 0), 0.0)          
+        #]
+
         static_lines = [
-            pymunk.Segment(static_body, (0, 0), (0, size[1]), 0.0),
-            pymunk.Segment(static_body, (0, size[1]), (size[0], size[1]), 0.0),
-            pymunk.Segment(static_body, (size[0], size[1]), (size[0], 0), 0.0)          
+            pymunk.Segment(static_body, (400, 0), (400, size[1]), 0.0),
+            pymunk.Segment(static_body, (400, size[1]), (600, size[1]), 0.0),
+            pymunk.Segment(static_body, (600, size[1]), (600, 0), 0.0)          
         ]
+        static_lines = [
+            pymunk.Segment(static_body, (490, 800), (490, 1172), 0.0),
+            pymunk.Segment(static_body, (490, 1172), (340,1321), 0.0),
+            pymunk.Segment(static_body, (340,1321), (340, 1720), 0.0),
+            pymunk.Segment(static_body, (340,1720), (740, 1720), 0.0),
+            pymunk.Segment(static_body, (740, 1720), (740, 1321), 0.0),
+            pymunk.Segment(static_body, (740, 1321), (590, 1172), 0.0),
+            pymunk.Segment(static_body, (590, 1172), (590, 800), 0.0),   
+        ]
+
         for line in static_lines:
             line.elasticity = 0.5
             line.friction = 0.9

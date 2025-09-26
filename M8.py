@@ -23,7 +23,7 @@ except IndexError :
     DEBUG=False
 
 #GAME CONSTANTS
-BALL_RADIUS = 150
+BALL_RADIUS = 50
 TRASH_CHANGE=4*FPS
 BTN_TIMEOUT=0.5*FPS
 
@@ -64,6 +64,10 @@ LED_p=[67,68,69,70,71,72,73,74,75,76]
 
 #Animation CONSTANTS
 
+
+
+
+
 #STYLE
 pygame.font.init()
 WHITE=pygame.Color("White")
@@ -72,10 +76,13 @@ GREEN=pygame.Color("Green")
 RED=pygame.Color("Red")
 BLUE=pygame.Color("Blue")
 COLOR_BG=pygame.Color(242,193,202,255)
-COLOR_HL=pygame.Color(255,255,255,255)
+COLOR_HL=pygame.Color(38,53,139,255)
 
 debug_font=pygame.font.Font('freesansbold.ttf',14)
-score_font=pygame.font.Font('freesansbold.ttf',48)
+score_font=pygame.font.Font('freesansbold.ttf',64)
+
+#SCREEN STYLE
+TRASH_POS = (540,646)
 
 #ASSETS
 #IMG
@@ -83,6 +90,7 @@ select = pygame.image.load(DIR+"assets/img/select.png").convert_alpha()
 trash = pygame.image.load(DIR+"assets/img/trash.png").convert_alpha()
 intro = pygame.image.load(DIR+"assets/img/intro.png").convert_alpha()
 panel = pygame.image.load(DIR+"assets/img/panel.png").convert_alpha()
+bg = pygame.image.load(DIR+"assets/img/bg.png").convert_alpha()
 
 y0=pygame.image.load(DIR+"assets/img/y_0.png").convert_alpha()
 y1=pygame.image.load(DIR+"assets/img/y_1.png").convert_alpha()
@@ -109,8 +117,9 @@ short_bad_1=pygame.mixer.Sound(DIR+"assets/sound/low_fb_neg.wav")
 long_good_1=pygame.mixer.Sound(DIR+"assets/sound/chord_fb_pos.wav")
 long_bad_1=pygame.mixer.Sound(DIR+"assets/sound/chord_fb_neg.wav")
 
-pygame.mixer.music.load(DIR+"assets/sound/music.mp3")
-pygame.mixer.music.play()
+#pygame.mixer.music.load(DIR+"assets/sound/music.mp3")
+#pygame.mixer.music.play()
+
 #DATA
 
 trash_data = [
@@ -149,6 +158,18 @@ class Pop(Anim) : #Example use of the Anim class, wich create an image that fade
         Anim.__init__(self,max_frame)
         self.img=img
         self.pos=pos
+        self.method=self.moove
+    def anim(self) :
+        Anim.anim(self)
+
+class Dash(Anim) : #Spawn an img and throw it in a defined direction
+    def moove(self,current_frame) :
+        center_blit(SCREEN,self.img,(self.pos[0]+self.direction[0]*current_frame,self.pos[1]+self.direction[1]*current_frame))
+    def __init__(self,max_frame,img,pos,direction) :
+        Anim.__init__(self,max_frame)
+        self.img=img
+        self.pos=pos
+        self.direction=direction
         self.method=self.moove
     def anim(self) :
         Anim.anim(self)
@@ -276,8 +297,9 @@ def bad() : # Called by the pressed() method when the bad button was pressed
     short_bad_1.play()
     LED_HANDLER.set_mode_blink()
     ANIMATIONS.append(Pop(20,score_font.render("-1 !",1,RED,COLOR_BG),(800,450-225)))
+    ANIMATIONS.append(Dash(20,CURRENT_TRASH.img,TRASH_POS,(50,75)))
     BAD+=1
-    BALLS._create_ball(CURRENT_TRASH.ball,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
+    BALLS._create_ball(CURRENT_TRASH.ball,TRASH_POS)
     new_trash()
 
 def pressed(btn) : # Called by all the buttons except the start button, check if the answer is good or bad 
@@ -286,7 +308,6 @@ def pressed(btn) : # Called by all the buttons except the start button, check if
     global PLAYING
     if PLAYING :
         print("COUCOU")
-        random.choice(pop).play()
         if CURRENT_TRASH.check_value(btn) :
             good()
         else :
@@ -405,7 +426,8 @@ reset()
 while on :
     
     #Cleaning of Screen
-    SCREEN.fill(COLOR_BG)
+    #SCREEN.fill(COLOR_BG)
+    SCREEN.blit(bg,(0,0))
 
     #Event handling
     for event in pygame.event.get():
@@ -417,19 +439,19 @@ while on :
             on=False
     
     #Background
-    center_blit(SCREEN,trash,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
+    #center_blit(SCREEN,trash,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
 
     #Arc
-    pygame.draw.arc(SCREEN,BLACK,(SCREEN_SIZE[0]/2-190,SCREEN_SIZE[1]/2-190,380,380),1.5,1.5+TRASH_CHANGE_COUNTER*rad,20)
+    pygame.draw.arc(SCREEN,COLOR_HL,(TRASH_POS[0]-190,TRASH_POS[1]-190,380,380),1.5,1.5+TRASH_CHANGE_COUNTER*rad,20)
 
     #Trash
-    center_blit(SCREEN,CURRENT_TRASH.img,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
+    center_blit(SCREEN,CURRENT_TRASH.img,TRASH_POS)
 
     #Couvercle
-    pygame.draw.circle(SCREEN,BLACK,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2),180,int(TRASH_CHANGE_COUNTER*1.5))
+    #pygame.draw.circle(SCREEN,BLACK,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2),180,int(TRASH_CHANGE_COUNTER*1.5))
 
     #Score
-    center_blit(SCREEN,score_font.render(f"SCORE : {str(SCORE)} | VIES : {str(VIES-BAD)}",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,100))
+    center_blit(SCREEN,score_font.render(f"SCORE : {str(SCORE)} | VIES : {str(VIES-BAD)}",1,WHITE,COLOR_HL),(SCREEN_SIZE[0]/2,50))
 
     #Handle Leds
     LED_HANDLER.step()
@@ -452,9 +474,9 @@ while on :
         BALLS.handle_balls(SCREEN)
 
         #Check Defeat
-        if BAD>10 :
-            GAME_STATUS="END"
-            PLAYING=False
+        #if BAD>10 :
+        #    GAME_STATUS="END"
+        #    PLAYING=False
         
         #Update score (elapsed game time)
         SCORE+=1

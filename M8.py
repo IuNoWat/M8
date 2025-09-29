@@ -214,7 +214,7 @@ class Leds() : # Class used to handle the ledstrip,
                 self.strip.setPixelColor(j,self.BLACK)
             self.strip.setPixelColor(i,self.WHITE)
             self.strip.show()
-            time.sleep(0.1)
+            time.sleep(0.05)
         for j in range(0,self.nb_of_leds) :
             self.strip.setPixelColor(j,self.BLACK)
         self.strip.show()
@@ -244,7 +244,7 @@ class Leds() : # Class used to handle the ledstrip,
             self.strip.setPixelColor(i,self.current_color)
         if self.count<=0 :
             self.current_mode=False
-    def set_mode_blink(self) : # Launh the blink mode, make all the leds blink
+    def set_mode_blink(self) : # Launch the blink mode, make all the leds blink
         self.count=15
         self.current_mode="blink"
     def blink(self) :
@@ -306,16 +306,33 @@ def bad() : # Called by the pressed() method when the bad button was pressed
     global ANIMATIONS
     global BALLS
     global LED_HANDLER
+    global GAME_STATUS
+    global PLAYING
+
     short_bad_1.play()
     LED_HANDLER.set_mode_blink()
-    ANIMATIONS.append(Pop(20,score_font.render("-1 !",1,RED,COLOR_BG),(800,450-225)))
     BAD+=1
     BALLS._create_ball(CURRENT_TRASH.ball,TRASH_POS)
+    GAME_STATUS="PAUSE"
+    PLAYING=False
+
+    new_trash()
+    
+def late() : # Called if no button is pressed in time
+    global BAD
+    global ANIMATIONS
+    global BALLS
+    global LED_HANDLER
+
+    short_bad_1.play()
+    LED_HANDLER.set_mode_blink()
+    BAD+=1
+    BALLS._create_ball(CURRENT_TRASH.ball,TRASH_POS)
+    
     new_trash()
 
 def pressed(btn) : # Called by all the buttons except the start button, check if the answer is good or bad 
     global CURRENT_TRASH
-    global GAME_STATUS
     global PLAYING
     if PLAYING :
         print("COUCOU")
@@ -323,8 +340,6 @@ def pressed(btn) : # Called by all the buttons except the start button, check if
             good()
         else :
             bad()
-            GAME_STATUS="PAUSE"
-            PLAYING=False
 
 def pressed_1(arg) :
     pressed("1")
@@ -448,7 +463,6 @@ while on :
             on=False
     
     #Background
-    #center_blit(SCREEN,trash,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
 
     #Arc
     pygame.draw.arc(SCREEN,COLOR_HL,(TRASH_POS[0]-190,TRASH_POS[1]-190,380,380),1.5,1.5+TRASH_CHANGE_COUNTER*rad,20)
@@ -465,27 +479,28 @@ while on :
     #Handle Leds
     LED_HANDLER.step()
 
+    #Handle Animations
+    for i,animation in enumerate(ANIMATIONS) :
+        animation.anim()
+        if animation.finished :
+            ANIMATIONS.pop(i)
+
+    #Handle BALLS physic      
+    BALLS.handle_balls(SCREEN)
+
+    #Check Defeat
+    #if BAD>10 :
+    #    GAME_STATUS="END"
+    #    PLAYING=False
+    
+    
     #Engine
     if PLAYING :
         #Checking trash counter
         if TRASH_CHANGE_COUNTER==0 :
-            bad()
+            late()
         else :
             TRASH_CHANGE_COUNTER-=1
-
-        #Handle Animations
-        for i,animation in enumerate(ANIMATIONS) :
-            animation.anim()
-            if animation.finished :
-                ANIMATIONS.pop(i)
-
-        #Handle BALLS physic      
-        BALLS.handle_balls(SCREEN)
-
-        #Check Defeat
-        #if BAD>10 :
-        #    GAME_STATUS="END"
-        #    PLAYING=False
         
         #Update score (elapsed game time)
         SCORE+=1

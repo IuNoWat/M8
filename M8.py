@@ -44,16 +44,23 @@ ball_elasticity = 0.5
 shape_friction = 0.9
 
 #GPIO CONSTANTS
-
+GPIO_btn_0="BOARD18"
 GPIO_btn_1="BOARD22"
 GPIO_btn_2="BOARD8"
 GPIO_btn_3="BOARD32"
 GPIO_btn_4="BOARD16"
 GPIO_btn_5="BOARD10"
 
-GPIO_btn_0="BOARD18"
-
 GPIO_led=18
+
+GPIO_btn_led_0="BOARD35"
+GPIO_btn_led_1="BOARD37"
+GPIO_btn_led_2="BOARD31"
+GPIO_btn_led_3="BOARD29"
+GPIO_btn_led_4="BOARD27"
+GPIO_btn_led_5="BOARD33"
+
+
 
 #Animation CONSTANTS
 color_directions = {
@@ -75,8 +82,12 @@ BLUE=pygame.Color("Blue")
 COLOR_BG=pygame.Color(242,193,202,255)
 COLOR_HL=pygame.Color(38,53,139,255)
 
-debug_font=pygame.font.Font('freesansbold.ttf',14)
-score_font=pygame.font.Font('freesansbold.ttf',64)
+debug_font=pygame.font.Font(DIR+"assets/font/debug.ttf",14)
+score_font=pygame.font.Font(DIR+"assets/font/digit.TTF",120)
+mult_font = pygame.font.Font(DIR+"assets/font/debug.ttf",140)
+
+normal_font = pygame.font.Font(DIR+"assets/font/bai_jamburee.ttf",22)
+title_font = pygame.font.Font(DIR+"assets/font/salford_sans_arabic.ttf",80)
 
 #SCREEN STYLE
 TRASH_POS = (540,646)
@@ -174,11 +185,20 @@ class Dash(Anim) : #Spawn an img and throw it in a defined direction
 #Led Handler
 class Leds() : # Class used to handle the ledstrip,
     def __init__(self,pin,nb_of_leds) :
+        #ledstrip
         self.nb_of_leds=nb_of_leds
         self.strip=rpi.PixelStrip(nb_of_leds,pin)
         self.strip.begin()
+        #btnleds
+        self.btn_led = [
+            gpio.LED(GPIO_btn_led_1),
+            gpio.LED(GPIO_btn_led_2),
+            gpio.LED(GPIO_btn_led_3),
+            gpio.LED(GPIO_btn_led_4),
+            gpio.LED(GPIO_btn_led_5)
+        ]
+        self.start_led = gpio.LED(GPIO_btn_led_0)
         #Colors
-
         self.RED=rpi.Color(255,0,0)
         self.BLUE=rpi.Color(0,0,255)
         self.PURPLE=rpi.Color(255,0,255)
@@ -189,7 +209,6 @@ class Leds() : # Class used to handle the ledstrip,
         self.GREEN=rpi.Color(0,255,0)
         self.GRIS=rpi.Color(50,50,50)
         self.MARRON=rpi.Color(255,255,150)
-
         #Engine value
         self.current_mode=False
         self.count=0
@@ -221,6 +240,8 @@ class Leds() : # Class used to handle the ledstrip,
     def base(self) :
         for i in range(0,self.nb_of_leds) :
             self.strip.setPixelColor(i,self.WHITE)
+        for led in self.btn_led :
+            led.on()
     def step(self) : # Called each frame, use self.base_colors or loop through an aniamtion defined in self.current_mode
         for i in range(0,self.nb_of_leds) :
             self.strip.setPixelColor(i,self.BLACK)
@@ -252,15 +273,62 @@ class Leds() : # Class used to handle the ledstrip,
         if self.count%3==0 :
             for i in range(0,self.nb_of_leds) :
                 self.strip.setPixelColor(i,self.BLACK)
+            for led in self.btn_led :
+                led.off()
         else :
             for i in range(0,self.nb_of_leds) :
                 self.strip.setPixelColor(i,self.RED)
+            for led in self.btn_led :
+                led.on()
         if self.count<=0 :
             self.current_mode=False
     def close(self) :
         for i in range(0,self.nb_of_leds) :
             self.strip.setPixelColor(i,self.BLACK)
         self.strip.show()
+
+class Panel() :
+    def __init__(self,title="Default_Title",txt=["Iorem Ipsum dolor sic amet etc etc etc etc etc etc etc etc etc etc"]) :
+        self.title=title
+        self.txt=txt
+        self.panel = pygame.image.load(DIR+"assets/img/panel.png").convert_alpha()
+        self.panel_size = panel.get_size()
+    def render(self) :
+        rendered_title = title_font.render(self.title,1,COLOR_HL)
+        center_blit(self.panel,rendered_title,(self.panel_size[0]/2,80))
+        rendered_txt = render_multiple_lines(normal_font,self.txt,COLOR_HL)
+        self.panel.blit(rendered_txt,(30,120))
+        return self.panel
+
+class Panel_wrong(Panel) :
+    def __init__(self,specific_txt) :
+        Panel.__init__(self,title="Erreur !")
+        self.txt = [
+            "                                                                                         ",
+            "Raté ! Tu as envoyé un déchet dans la mauvaise",
+            "poubelle !",
+            specific_txt,
+            " ",
+            " ",
+            " ",
+            "Appuie sur le bouton rouge pour continuer !"
+        ]
+
+class Panel_end(Panel) :
+    def __init__(self,game_duration,good_nb,bad_nb,score) :
+        Panel.__init__(self,title="GAME OVER !")
+        self.txt = [
+            "                                                                                         ",
+            f"Tu as fait de ton mieux, mais les déchets ont fini",
+            f"par te submerger. Tu as tenu {int(game_duration)} secondes",
+            f"Au final, tu a trié {good_nb} déchets dans la bonne poubelle,",
+            f" et tu t'es trompé {bad_nb} fois",
+            " ",
+            f"Ton score final est de {score} points",
+            " ",
+            " ",
+            "Appuie sur le bouton rouge pour recommencer !"
+        ]
 
 #SPECIFIC ENGINE
 
@@ -269,7 +337,7 @@ class Trash() : #Used to store all the informations needed for each trash
         self.img=data["img"]
         self.ball=data["ball"]
         self.good_value=data["good_value"]
-        self.txt=data["txt"]
+        self.txt=Panel_wrong(data["txt"])
     def check_value(self,btn) :
         if corress_btn[btn]==self.good_value :
             return True
@@ -292,22 +360,35 @@ def new_trash() : #Change current trash
 
 def good() : # Called by the pressed() method when the good button was pressed
     global GOOD
+    global SCORE
     global ANIMATIONS
     global LED_HANDLER
+    global MULT
     short_good_1.play()
     LED_HANDLER.set_mode_flash(CURRENT_TRASH.good_value)
-    ANIMATIONS.append(Pop(20,score_font.render("+1 !",1,BLUE,COLOR_BG),(800,450-225)))
+
+    score_won = TRASH_CHANGE_COUNTER * MULT
+
+    ANIMATIONS.append(Pop(20,score_font.render(f"+{score_won} !",1,BLUE,COLOR_BG),TRASH_POS))
     ANIMATIONS.append(Dash(20,CURRENT_TRASH.ball,TRASH_POS,color_directions[CURRENT_TRASH.good_value]))
+    
     GOOD+=1
+    MULT+=1
+    SCORE+=score_won
     new_trash()
 
 def bad() : # Called by the pressed() method when the bad button was pressed
+    global CURRENT_TRASH
     global BAD
     global ANIMATIONS
     global BALLS
     global LED_HANDLER
     global GAME_STATUS
     global PLAYING
+    global current_pause_panel
+    global MULT
+
+    current_pause_panel = CURRENT_TRASH.txt
 
     short_bad_1.play()
     LED_HANDLER.set_mode_blink()
@@ -315,6 +396,7 @@ def bad() : # Called by the pressed() method when the bad button was pressed
     BALLS._create_ball(CURRENT_TRASH.ball,TRASH_POS)
     GAME_STATUS="PAUSE"
     PLAYING=False
+    MULT=1
 
     new_trash()
     
@@ -323,11 +405,13 @@ def late() : # Called if no button is pressed in time
     global ANIMATIONS
     global BALLS
     global LED_HANDLER
+    global MULT
 
     short_bad_1.play()
     LED_HANDLER.set_mode_blink()
     BAD+=1
     BALLS._create_ball(CURRENT_TRASH.ball,TRASH_POS)
+    MULT=1
     
     new_trash()
 
@@ -423,6 +507,8 @@ def reset() : # To reset the game
     global GAME_STATUS
     global PLAYING
     global BALLS
+    global MULT
+    global TIME_ELAPSED
     OLD_TRASH=False
     CURRENT_TRASH=trashs[0]
     TRASH_CHANGE_COUNTER=TRASH_CHANGE
@@ -432,6 +518,7 @@ def reset() : # To reset the game
     VIES=10
     GOOD=0
     BAD=0
+    TIME_ELAPSED=0
     GAME_STATUS="IDLE"
     PLAYING=False
     BALLS=BB.BouncyBalls(
@@ -442,6 +529,7 @@ def reset() : # To reset the game
         ball_elasticity,
         shape_friction
     )
+    MULT=1
 
 reset()
 
@@ -461,8 +549,6 @@ while on :
             on = False
         if keys[pygame.K_ESCAPE] : # ECHAP : Quitter
             on=False
-    
-    #Background
 
     #Arc
     pygame.draw.arc(SCREEN,COLOR_HL,(TRASH_POS[0]-190,TRASH_POS[1]-190,380,380),1.5,1.5+TRASH_CHANGE_COUNTER*rad,20)
@@ -474,7 +560,13 @@ while on :
     #pygame.draw.circle(SCREEN,BLACK,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2),180,int(TRASH_CHANGE_COUNTER*1.5))
 
     #Score
-    center_blit(SCREEN,score_font.render(f"SCORE : {str(SCORE)} | VIES : {str(VIES-BAD)}",1,WHITE,COLOR_HL),(SCREEN_SIZE[0]/2,50))
+    txt_score = f"SCORE : {str(SCORE).zfill(7)}"
+    to_blit = score_font.render(txt_score,1,WHITE,COLOR_HL)
+    SCREEN.blit(to_blit,(230,40))
+    #Multiplicator
+    txt_mult = f"x{MULT}"
+    to_blit = mult_font.render(txt_mult,1,WHITE,COLOR_HL)
+    SCREEN.blit(to_blit,(40,20))
 
     #Handle Leds
     LED_HANDLER.step()
@@ -489,11 +581,10 @@ while on :
     BALLS.handle_balls(SCREEN)
 
     #Check Defeat
-    #if BAD>10 :
-    #    GAME_STATUS="END"
-    #    PLAYING=False
-    
-    
+    if BAD>5 :
+        GAME_STATUS="END"
+        PLAYING=False
+        END_PANEL=Panel_end(TIME_ELAPSED/FPS,GOOD,BAD,SCORE)
     #Engine
     if PLAYING :
         #Checking trash counter
@@ -502,25 +593,17 @@ while on :
         else :
             TRASH_CHANGE_COUNTER-=1
         
-        #Update score (elapsed game time)
-        SCORE+=1
-
+        TIME_ELAPSED+=1
     else :
         match GAME_STATUS :
             case "IDLE" :
                 center_blit(SCREEN,intro,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
             case "PAUSE" :
-                center_blit(SCREEN,panel,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
-                center_blit(SCREEN,score_font.render("OUPS !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,250))
-                center_blit(SCREEN,score_font.render(OLD_TRASH.txt,1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,400))
-                center_blit(SCREEN,score_font.render("Appuie sur le bouton jaune pour continuer !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,500))
+                to_blit = current_pause_panel.render()
+                center_blit(SCREEN,to_blit,TRASH_POS)
             case "END" :
-                center_blit(SCREEN,panel,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))
-                center_blit(SCREEN,score_font.render("BRAVO !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,250))
-                center_blit(SCREEN,score_font.render("Tu as tenu "+str(round(SCORE/30))+" secondes !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,400))
-                center_blit(SCREEN,score_font.render("Tu as trié "+str(GOOD)+" déchets !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,500))
-                center_blit(SCREEN,score_font.render("Pour recommencer, appuie sur le bouton jaune !",1,BLACK,COLOR_BG),(SCREEN_SIZE[0]/2,600))
-    
+                to_blit = END_PANEL.render()
+                center_blit(SCREEN,to_blit,TRASH_POS)
     #DEBUG
     if DEBUG :
         fps = str(round(CLOCK.get_fps(),1))

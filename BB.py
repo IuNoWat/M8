@@ -49,7 +49,7 @@ class BouncyBalls(object):
         for x in range(self._physics_steps_per_frame):
             self._space.step(self._dt)
 
-        higher_ball = 1920
+        lower_ball = 0
 
         #self._space.debug_draw(self._draw_options)
         for ball in self._balls :
@@ -64,10 +64,9 @@ class BouncyBalls(object):
             p = p - offset
 
             SCREEN.blit(rotated_logo_img, (round(p.x), round(p.y)))
-            if p.y<higher_ball :
-                higher_ball=p.y
-        
-        return higher_ball
+            if p.y>lower_ball :
+                lower_ball=p.y
+        return lower_ball
 
 
     def _add_static_scenery(self,SCREEN) -> None:
@@ -87,15 +86,27 @@ class BouncyBalls(object):
         #    pymunk.Segment(static_body, (600, size[1]), (600, 0), 0.0)          
         #]
         
+        #static_lines = [
+        #    pymunk.Segment(static_body, (490, 839), (490, 1172), 0.0),
+        #    pymunk.Segment(static_body, (490, 1172), (340,1321), 0.0),
+        #    pymunk.Segment(static_body, (340,1321), (340, 1720), 0.0),
+        #    pymunk.Segment(static_body, (340,1720), (740, 1720), 0.0),
+        #    pymunk.Segment(static_body, (740, 1720), (740, 1321), 0.0),
+        #    pymunk.Segment(static_body, (740, 1321), (590, 1172), 0.0),
+        #    pymunk.Segment(static_body, (590, 1172), (590, 839), 0.0),   
+        #]
+
         static_lines = [
-            pymunk.Segment(static_body, (490, 839), (490, 1172), 0.0),
-            pymunk.Segment(static_body, (490, 1172), (340,1321), 0.0),
-            pymunk.Segment(static_body, (340,1321), (340, 1720), 0.0),
-            pymunk.Segment(static_body, (340,1720), (740, 1720), 0.0),
-            pymunk.Segment(static_body, (740, 1720), (740, 1321), 0.0),
-            pymunk.Segment(static_body, (740, 1321), (590, 1172), 0.0),
-            pymunk.Segment(static_body, (590, 1172), (590, 839), 0.0),   
+            pymunk.Segment(static_body, (385, 1250), (371, 1267), 0.0),
+            pymunk.Segment(static_body, (371, 1267), (424,1686), 0.0),
+            pymunk.Segment(static_body, (424,1686), (438, 1700), 0.0),
+            pymunk.Segment(static_body, (438, 1700), (641, 1700), 0.0),
+            pymunk.Segment(static_body, (641, 1700), (655, 1686), 0.0),
+            pymunk.Segment(static_body, (655, 1686), (708, 1267), 0.0),
+            pymunk.Segment(static_body, (708, 1267), (694, 1250), 0.0),   
         ]
+
+
 
         for line in static_lines:
             line.elasticity = 0.5

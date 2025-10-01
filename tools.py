@@ -6,7 +6,10 @@ def center_blit(screen,img,coord) :
     screen.blit(img,real_coord)
 
 def render_multiple_lines(font,txt_list,color,interline=0.1) :
-    max_size=font.size(txt_list[0])
+    max_size=[0,font.size(txt_list[0])[1]]
+    for lines in txt_list :
+        if font.size(lines)[0]>max_size[0] :
+            max_size[0] = font.size(lines)[0]
     line_heigth=max_size[1]+(max_size[1]*interline)
     rendered_txt = pygame.Surface((max_size[0], len(txt_list)*line_heigth),pygame.SRCALPHA)
     rendered_txt.fill((0,0,0,0))

@@ -49,6 +49,8 @@ class BouncyBalls(object):
         for x in range(self._physics_steps_per_frame):
             self._space.step(self._dt)
 
+        higher_ball = 1920
+
         #self._space.debug_draw(self._draw_options)
         for ball in self._balls :
             # image draw
@@ -62,6 +64,11 @@ class BouncyBalls(object):
             p = p - offset
 
             SCREEN.blit(rotated_logo_img, (round(p.x), round(p.y)))
+            if p.y<higher_ball :
+                higher_ball=p.y
+        
+        return higher_ball
+
 
     def _add_static_scenery(self,SCREEN) -> None:
         size=SCREEN.get_size()

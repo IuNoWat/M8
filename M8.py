@@ -144,6 +144,46 @@ trash_data = [
     {"img":b1,"ball":ball_b1,"good_value":"gris","txt":"C'était dans la poubelle bleue !"}
 ]
 
+
+
+trash_data_v2 = {
+    "1_1_img" : pygame.image.load(DIR+"assets/trash_v2/1_1.png").convert_alpha(),
+    "1_2_img" : pygame.image.load(DIR+"assets/trash_v2/1_2.png").convert_alpha(),
+    "1_3_img" : pygame.image.load(DIR+"assets/trash_v2/1_3.png").convert_alpha(),
+    "1_4_img" : pygame.image.load(DIR+"assets/trash_v2/1_4.png").convert_alpha(),
+    "1_5_img" : pygame.image.load(DIR+"assets/trash_v2/1_5.png").convert_alpha(),
+    "2_1_img" : pygame.image.load(DIR+"assets/trash_v2/2_1.png").convert_alpha(),
+    "3_1_img" : pygame.image.load(DIR+"assets/trash_v2/3_1.png").convert_alpha(),
+    "3_2_img" : pygame.image.load(DIR+"assets/trash_v2/3_2.png").convert_alpha(),
+    "3_3_img" : pygame.image.load(DIR+"assets/trash_v2/3_3.png").convert_alpha(),
+    "3_4_img" : pygame.image.load(DIR+"assets/trash_v2/3_4.png").convert_alpha(),
+    "3_5_img" : pygame.image.load(DIR+"assets/trash_v2/3_5.png").convert_alpha(),
+    "4_1_img" : pygame.image.load(DIR+"assets/trash_v2/4_1.png").convert_alpha(),
+    "4_2_img" : pygame.image.load(DIR+"assets/trash_v2/4_2.png").convert_alpha(),
+    "4_3_img" : pygame.image.load(DIR+"assets/trash_v2/4_3.png").convert_alpha(),
+    "4_4_img" : pygame.image.load(DIR+"assets/trash_v2/4_4.png").convert_alpha(),
+    "5_1_img" : pygame.image.load(DIR+"assets/trash_v2/5_1.png").convert_alpha(),
+    "5_2_img" : pygame.image.load(DIR+"assets/trash_v2/5_2.png").convert_alpha(),
+    "5_3_img" : pygame.image.load(DIR+"assets/trash_v2/5_3.png").convert_alpha(),
+    "5_4_img" : pygame.image.load(DIR+"assets/trash_v2/5_4.png").convert_alpha(),
+    "5_5_img" : pygame.image.load(DIR+"assets/trash_v2/5_5.png").convert_alpha()
+}
+
+trash_data = []
+
+for key in trash_data_v2 :
+    circle = crop_as_circle(trash_data_v2[key])
+    trash_data.append(
+        {
+            "img":pygame.transform.scale(circle,(350,350)),
+            "ball":pygame.transform.scale(circle,(BALL_RADIUS*2,BALL_RADIUS*2)),
+            "good_value":corress_btn[key[:1]],
+            "txt":"C'était dans la poubelle "+corress_btn[key[:1]]
+        }
+    )
+
+
+
 #ENGINE
 
 class Anim() : #Base anim class, meant to be inherited. To define what the animation do, change the self.method variable
@@ -355,7 +395,7 @@ def new_trash() : #Change current trash
         new=random.choice(trashs)
     CURRENT_TRASH=new
     TRASH_CHANGE_COUNTER=TRASH_CHANGE-DIFFICULTY
-    if TRASH_CHANGE-DIFFICULTY>5 :
+    if TRASH_CHANGE-DIFFICULTY>2 :
         DIFFICULTY+=1
 
 def good() : # Called by the pressed() method when the good button was pressed
@@ -370,7 +410,7 @@ def good() : # Called by the pressed() method when the good button was pressed
     score_won = TRASH_CHANGE_COUNTER * MULT
 
     ANIMATIONS.append(Pop(20,score_font.render(f"+{score_won} !",1,BLUE,COLOR_BG),TRASH_POS))
-    ANIMATIONS.append(Dash(20,CURRENT_TRASH.ball,TRASH_POS,color_directions[CURRENT_TRASH.good_value]))
+    ANIMATIONS.append(Dash(FPS,CURRENT_TRASH.ball,TRASH_POS,color_directions[CURRENT_TRASH.good_value]))
     
     GOOD+=1
     MULT+=1
@@ -509,6 +549,7 @@ def reset() : # To reset the game
     global BALLS
     global MULT
     global TIME_ELAPSED
+    global DEATH_COUNTER
     OLD_TRASH=False
     CURRENT_TRASH=trashs[0]
     TRASH_CHANGE_COUNTER=TRASH_CHANGE
@@ -518,6 +559,7 @@ def reset() : # To reset the game
     VIES=10
     GOOD=0
     BAD=0
+    DEATH_COUNTER=0
     TIME_ELAPSED=0
     GAME_STATUS="IDLE"
     PLAYING=False
@@ -577,14 +619,24 @@ while on :
         if animation.finished :
             ANIMATIONS.pop(i)
 
-    #Handle BALLS physic      
-    BALLS.handle_balls(SCREEN)
+    #Handle BALLS physic
+    higher_ball = BALLS.handle_balls(SCREEN)
+    if higher_ball<850 :
+        DEATH_COUNTER+=1
+        if DEATH_COUNTER%FPS==0 :
+            ANIMATIONS.append(Pop(20,score_font.render(f"ATTENTION !",1,RED,COLOR_BG),TRASH_POS))
+    else :
+        DEATH_COUNTER=0
 
     #Check Defeat
-    if BAD>5 :
+    if DEATH_COUNTER>FPS*3 :
         GAME_STATUS="END"
         PLAYING=False
-        END_PANEL=Panel_end(TIME_ELAPSED/FPS,GOOD,BAD,SCORE)
+        END_PANEL=Panel_end(TIME_ELAPSED/FPS,GOOD,BAD,SCORE)        
+    #if BAD>5 :
+    #    GAME_STATUS="END"
+    #    PLAYING=False
+    #    END_PANEL=Panel_end(TIME_ELAPSED/FPS,GOOD,BAD,SCORE)
     #Engine
     if PLAYING :
         #Checking trash counter
@@ -604,6 +656,10 @@ while on :
             case "END" :
                 to_blit = END_PANEL.render()
                 center_blit(SCREEN,to_blit,TRASH_POS)
+                if TRASH_CHANGE_COUNTER==0 :
+                    late()
+                else :
+                    TRASH_CHANGE_COUNTER-=1
     #DEBUG
     if DEBUG :
         fps = str(round(CLOCK.get_fps(),1))

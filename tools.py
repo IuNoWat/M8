@@ -15,3 +15,10 @@ def render_multiple_lines(font,txt_list,color,interline=0.1) :
         rendered_txt.blit(rendered_line,(0,line_heigth*i))
     return rendered_txt
 
+def crop_as_circle(img) :
+    size=img.get_size()
+    rect = pygame.Surface(size,pygame.SRCALPHA)
+    meh = pygame.draw.rect(rect,(255,255,255),(0,0,*size), border_radius=600)
+    to_return = img.copy().convert_alpha()
+    to_return.blit(rect,(0,0),None,pygame.BLEND_RGBA_MIN)
+    return to_return

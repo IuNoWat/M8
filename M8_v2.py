@@ -580,11 +580,11 @@ class Game() :
         #Score
         txt_score = f"SCORE : {str(self.score).zfill(7)}"
         to_blit = score_font.render(txt_score,1,WHITE,COLOR_HL)
-        SCREEN.blit(to_blit,(230,40))
+        SCREEN.blit(to_blit,(230,120))
         #Multiplicator
         txt_mult = f"x{self.mult}"
         to_blit = mult_font.render(txt_mult,1,WHITE,COLOR_HL)
-        SCREEN.blit(to_blit,(40,20))
+        SCREEN.blit(to_blit,(60,100))
 
     def step_animations(self) :
         for i,animation in enumerate(self.ANIMATIONS) :
@@ -616,11 +616,11 @@ class Game() :
             #SCREEN cleanup
             SCREEN.blit(play_screen,(0,0))
 
-            #Handle Animations
-            self.step_animations()
-
             #Drawing current trash
             self.current_trash.render(600)
+
+            #Handle Animations
+            self.step_animations()
 
             #Drawing upper screen
             self.step_upper_screen()

@@ -123,12 +123,12 @@ debug_font=pygame.font.Font(DIR+"assets/font/debug.ttf",14)
 score_font=pygame.font.Font(DIR+"assets/font/digit.TTF",120)
 mult_font = pygame.font.Font(DIR+"assets/font/debug.ttf",140)
 normal_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",22)
-idle_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",28)
+idle_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",26)
 title_font = pygame.font.Font(DIR+"assets/font/salford_sans_arabic.ttf",80)
 
 #ASSETS
 #IMG
-accueil = pygame.image.load(DIR+"assets/img_v2/accueil.png").convert_alpha()
+accueil = pygame.image.load(DIR+"assets/img_v2/bg.png").convert_alpha()
 
 #panel = pygame.image.load(DIR+"assets/img_v2/panneau.png").convert_alpha() #Panel is loaded in the Panel class
 bandeau = pygame.image.load(DIR+"assets/img_v2/bandeau.png").convert_alpha()
@@ -137,6 +137,7 @@ bout = pygame.image.load(DIR+"assets/img_v2/tuyau.png").convert_alpha()
 logo = pygame.image.load(DIR+"assets/img_v2/logo.png").convert_alpha()
 title = pygame.image.load(DIR+"assets/img_v2/titre.png").convert_alpha()
 poubelle = pygame.image.load(DIR+"assets/img_v2/poubelle.png").convert_alpha()
+highscore = pygame.image.load(DIR+"assets/img_v2/highscore.png").convert_alpha()
 
 trash_emb = pygame.image.load(DIR+"assets/img_v2/emballage.png").convert_alpha()
 trash_pap = pygame.image.load(DIR+"assets/img_v2/papier.png").convert_alpha()
@@ -149,6 +150,7 @@ trash_bio = pygame.image.load(DIR+"assets/img_v2/biodechet.png").convert_alpha()
 idle_screen = pygame.Surface((1080,1920))
 idle_screen.blit(accueil,(0,0))
 center_blit(idle_screen,title,(SCREEN_SIZE[0]/2,210))
+center_blit(idle_screen,highscore,(SCREEN_SIZE[0]/2,900))
 
 idle_txt = [
     "                                                                                              ",
@@ -164,11 +166,11 @@ idle_txt = [
     "vont s'accumuler sur ton écran jusqu'à t'empécher de voir quoi que ce soit.",
     "",
     "",
-    "                     Appuie sur le bouton rouge pour commencer !"
+    "                        Appuie sur le bouton rouge pour commencer !"
 ]
 
 rendered_txt = render_multiple_lines(idle_font,idle_txt,WHITE)
-center_blit(idle_screen,rendered_txt,(SCREEN_SIZE[0]/2,700))
+center_blit(idle_screen,rendered_txt,(SCREEN_SIZE[0]/2,575))
 
 #play_screen
 play_screen = pygame.Surface((1080,1920))
@@ -555,6 +557,7 @@ class Game() :
         self.trash_change_timer = self.base_trash_change_timer
         self.current_trash_change_timer = self.base_trash_change_timer
         self.death_timer = 10
+        self.idle_timer = 0
 
         self.ANIMATIONS = {
             "dash":[],

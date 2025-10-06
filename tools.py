@@ -1,4 +1,5 @@
 import pygame
+import pygame.gfxdraw
 
 def center_blit(screen,img,coord) :
     size=img.get_size()
@@ -25,3 +26,22 @@ def crop_as_circle(img) :
     to_return = img.copy().convert_alpha()
     to_return.blit(rect,(0,0),None,pygame.BLEND_RGBA_MIN)
     return to_return
+
+def draw_aa_arc(size,color,width,start_angle,stop_angle) :
+    rect = pygame.Surface((size,size),pygame.SRCALPHA)
+    #for j in range(-1,1) :
+    #    for i in range(0,width) :
+    #        pygame.draw.arc(rect,color,(0+i+j/2,0+i+j/2,size-i,size-i),start_angle,stop_angle,1+i)
+    for i in range(0,width) :
+        pygame.draw.arc(rect,color,(0+i/2,0+i/2,size-i,size-i),start_angle,stop_angle,1+i)
+    return rect
+
+#def draw_aa_arc(size,color,width,start_angle,stope_angle) :
+#    rect = pygame.Surface((size,size),pygame.SRCALPHA)
+#    pygame.gfxdraw.aacircle(rect,size/2,size/2,size/2,color)
+#    pygame.gfxdraw.aacircle(rect,size/2,size/2,size/2-width,(0,0,0,0))
+#    for i in range(0,width) :
+#        pygame.draw.arc(rect,color,(0+i/2,0+i/2,size-i,size-i),start_angle,stope_angle,1)
+#    return rect
+
+

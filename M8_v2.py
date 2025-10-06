@@ -4,6 +4,7 @@ import time
 import os
 
 import pygame
+import pygame.gfxdraw
 import gpiozero as gpio
 import rpi_ws281x as rpi
 
@@ -15,6 +16,18 @@ FPS=30
 BALL_RADIUS = 50
 TRASH_CHANGE=4*FPS
 BTN_TIMEOUT=0.5*FPS
+REDUCE_TIMER_ON_NEW_TRASH = 1
+ANTIALIASING = 3
+
+TIME_ANIM_MOOV_CURRENT = 10
+TIME_ANIM_GROWTH_CURRENT = 5
+TIME_ANIM_DASH = FPS
+TIME_ANIM_POP = FPS/2
+
+MIN_CHANGE_TIME = TIME_ANIM_MOOV_CURRENT + TIME_ANIM_GROWTH_CURRENT + 5
+
+#STYLE CONSTANTS
+WIDTH_ARC = 10
 
 corress_btn = {
     "0":"dechet",
@@ -29,6 +42,7 @@ corress_btn = {
 DIR="/home/pi/Desktop/M8/"
 SCREEN_SIZE=(1080, 1920)
 SCREEN = pygame.display.set_mode(SCREEN_SIZE,pygame.FULLSCREEN)
+pygame.display.gl_set_attribute(pygame.GL_MULTISAMPLEBUFFERS,ANTIALIASING)
 #Define DEBUG
 try :
     if sys.argv[1]=="debug" :
@@ -57,6 +71,24 @@ GPIO_btn_led_5="BOARD33"
 
 #ASSETS POS
 TRASH_POS = (540,850)
+TRASH_STARTING_POINT_Y = 600
+TRASH_DIAMETER = 350
+
+pos_poubelles = {
+    "jaune":(1040,503),
+    "orange":(1046,853),
+    "vert":(1040,1200),
+    "gris":(73,1020),
+    "marron":(73,680)
+}
+
+name_to_int= {
+    "jaune":0,
+    "orange":1,
+    "vert":2,
+    "gris":3,
+    "marron":4
+}
 
 #BALL
 ball_mass = 10
@@ -66,11 +98,11 @@ shape_friction = 0.9
 #ANIMATION
 color_directions = {
     "dechet":(0,10000),
-    "jaune":(100,-70),
-    "orange":(100,0),
-    "vert":(100,70),
-    "gris":(-100,37),
-    "marron":(-100,-37)
+    "jaune":(100,-70)*2,
+    "orange":(100,0)*2,
+    "vert":(100,70)*2,
+    "gris":(-100,37)*2,
+    "marron":(-100,-37)*2
 }
 
 #STYLE
@@ -91,7 +123,7 @@ debug_font=pygame.font.Font(DIR+"assets/font/debug.ttf",14)
 score_font=pygame.font.Font(DIR+"assets/font/digit.TTF",120)
 mult_font = pygame.font.Font(DIR+"assets/font/debug.ttf",140)
 normal_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",22)
-idle_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",25)
+idle_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",28)
 title_font = pygame.font.Font(DIR+"assets/font/salford_sans_arabic.ttf",80)
 
 #ASSETS
@@ -132,11 +164,11 @@ idle_txt = [
     "vont s'accumuler sur ton écran jusqu'à t'empécher de voir quoi que ce soit.",
     "",
     "",
-    "Appuie sur le bouton rouge pour commencer !"
+    "                     Appuie sur le bouton rouge pour commencer !"
 ]
 
 rendered_txt = render_multiple_lines(idle_font,idle_txt,WHITE)
-center_blit(idle_screen,rendered_txt,(SCREEN_SIZE[0]/2,1500))
+center_blit(idle_screen,rendered_txt,(SCREEN_SIZE[0]/2,700))
 
 #play_screen
 play_screen = pygame.Surface((1080,1920))
@@ -154,11 +186,11 @@ rotated_ver=pygame.transform.rotate(trash_ver,-35)
 rotated_men=pygame.transform.rotate(trash_men,20)
 rotated_bio=pygame.transform.rotate(trash_bio,-20)
 
-center_blit(play_screen,rotated_emb,(1040,503))
-center_blit(play_screen,rotated_pap,(1046,853))#822
-center_blit(play_screen,rotated_ver,(1040,1200))
-center_blit(play_screen,rotated_men,(73,1020))
-center_blit(play_screen,rotated_bio,(73,680))
+#center_blit(play_screen,rotated_emb,(1040,503))
+#center_blit(play_screen,rotated_pap,(1046,853))
+#center_blit(play_screen,rotated_ver,(1040,1200))
+#center_blit(play_screen,rotated_men,(73,1020))
+#center_blit(play_screen,rotated_bio,(73,680))
 
 #upper screen background
 upper_screen_bg = pygame.Surface((1000,170))
@@ -208,7 +240,7 @@ for key in trash_img :
     pygame.draw.circle(ball,COLOR_HL,(BALL_RADIUS,BALL_RADIUS),BALL_RADIUS+1,5)
     trash_data.append(
         {
-            "img":pygame.transform.scale(circle,(350,350)),
+            "img":pygame.transform.scale(circle,(TRASH_DIAMETER,TRASH_DIAMETER)),
             "ball":ball,
             "good_value":corress_btn[key[:1]],
             "txt":"C'était dans la poubelle "+corress_btn[key[:1]]
@@ -240,19 +272,43 @@ class Pop(Anim) : #Example use of the Anim class, wich create an image that fade
         self.img=img
         self.pos=pos
         self.method=self.moove
+        self.gain=0
     def anim(self) :
         Anim.anim(self)
 
 class Dash(Anim) : #Spawn an img and throw it in a defined direction
     def moove(self,current_frame) :
         center_blit(SCREEN,self.img,(self.pos[0]+self.direction[0]*current_frame*self.speed,self.pos[1]+self.direction[1]*current_frame*self.speed))
-    def __init__(self,max_frame,img,pos,direction,speed) :
+    def __init__(self,max_frame,img,pos,direction,speed,gain) :
         Anim.__init__(self,max_frame)
         self.img=img
         self.pos=pos
         self.direction=direction
         self.speed=speed
         self.method=self.moove
+        self.gain=gain
+    def anim(self) :
+        Anim.anim(self)
+
+class Dash_to(Anim) : #Spawn an img and throw it in a defined direction
+    def moove(self,current_frame) :
+        center_blit(SCREEN,self.img,(self.pos[0]+self.step_x*current_frame,self.pos[1]+self.step_y*current_frame))
+    def __init__(self,name,max_frame,img,pos,aim,gain) :
+        Anim.__init__(self,max_frame)
+        self.name=name
+        self.img=img
+        self.pos=pos
+        self.method=self.moove
+        self.aim = aim
+        self.gain=gain
+        diff_x = abs(pos[0]-aim[0])
+        diff_y = abs(pos[1]-aim[1])
+        if pos[0]>aim[0] :
+            diff_x*=-1
+        if pos[1]>aim[1] :
+            diff_y*=-1
+        self.step_x = diff_x/max_frame
+        self.step_y = diff_y/max_frame
     def anim(self) :
         Anim.anim(self)
 
@@ -373,7 +429,7 @@ class Panel() :
         rendered_title = title_font.render(self.title,1,COLOR_HL)
         center_blit(self.panel,rendered_title,(self.panel_size[0]/2,80))
         rendered_txt = render_multiple_lines(normal_font,self.txt,COLOR_HL)
-        self.panel.blit(rendered_txt,(30,120))
+        self.panel.blit(rendered_txt,(50,150))
         return self.panel
 
 class Panel_wrong(Panel) :
@@ -383,7 +439,7 @@ class Panel_wrong(Panel) :
             "                                                                                         ",
             "Raté ! Tu as envoyé un déchet dans la mauvaise",
             "poubelle !",
-            specific_txt,
+            specific_txt, #Ligne de texte specifique définie par déchet
             " ",
             " ",
             " ",
@@ -396,17 +452,20 @@ class Panel_end(Panel) :
         self.txt = [
             "                                                                                         ",
             f"Tu as fait de ton mieux, mais les déchets ont fini",
-            f"par te submerger. Tu as tenu {int(game_duration)} secondes",
-            f"Au final, tu a trié {good_nb} déchets dans la bonne poubelle,",
-            f" et tu t'es trompé {bad_nb} fois",
+            f"par te submerger. Tu as tenu {int(game_duration)} secondes", #Durée de la partie en nombre de secondes
+            f"Au final, tu a trié {good_nb} déchets dans la bonne poubelle,", #Nombre de déchets triés dans la bonne poubelle
+            f" et tu t'es trompé {bad_nb} fois", #Nombre de déchets triés dans la mauvaise poubelle
             " ",
-            f"Ton score final est de {score} points",
+            f"Ton score final est de {score} points", #Score total
             " ",
             " ",
             "Appuie sur le bouton rouge pour recommencer !"
         ]
 
 #SPECIFIC ENGINE
+
+
+
 
 class Trash() : #Used to store all the informations needed for each trash
     def __init__(self,data) :
@@ -415,21 +474,51 @@ class Trash() : #Used to store all the informations needed for each trash
         self.good_value=data["good_value"]
         self.pause_panel=Panel_wrong(data["txt"])
         self.frame=0
+        self.frame_of_movement = TIME_ANIM_MOOV_CURRENT 
+        self.frame_of_growth = TIME_ANIM_GROWTH_CURRENT
+        self.frame_before_arc = self.frame_of_movement + self.frame_of_growth
     def check_value(self,btn) :
         if corress_btn[btn]==self.good_value :
             return True
         else :
             return False
-    def render(self,total) :
-        if self.frame < 10 :
-            step=total/10
-            temp_pos = (TRASH_POS[0],TRASH_POS[1]-(total-(step*self.frame)))
+    def render(self,total_timer) :
+        if self.frame < self.frame_of_movement :
+            step=TRASH_STARTING_POINT_Y/self.frame_of_movement
+            temp_pos = (TRASH_POS[0],TRASH_POS[1]-(TRASH_STARTING_POINT_Y-(step*self.frame)))
             center_blit(SCREEN,self.ball,temp_pos)
-        elif self.frame < 15 :
+        elif self.frame < self.frame_of_movement + self.frame_of_growth :
             center_blit(SCREEN,pygame.transform.scale_by(self.img,1-(0.1*(15-self.frame))),TRASH_POS)
         else :
+            angle=3.14*2/(total_timer - self.frame_before_arc)
             center_blit(SCREEN,self.img,TRASH_POS)
+            center_blit(SCREEN,draw_aa_arc(TRASH_DIAMETER,COLOR_HL,WIDTH_ARC,0,(self.frame- self.frame_before_arc)*angle),TRASH_POS)
+            #for i in range(0,15) :
+            #    pygame.draw.arc(SCREEN,COLOR_HL,(TRASH_POS[0]-TRASH_DIAMETER/2,TRASH_POS[1]-TRASH_DIAMETER/2,TRASH_DIAMETER-i,TRASH_DIAMETER),0,(self.frame- self.frame_before_arc)*angle,10-i)
+            #for i in range(0,20) :
+            #    pygame.gfxdraw.arc(SCREEN,TRASH_POS[0],TRASH_POS[1],int(TRASH_DIAMETER/2)-i,0,int((self.frame- self.frame_of_movement + self.frame_of_growth)*angle),COLOR_HL)
+            #print((self.frame- self.frame_of_movement + self.frame_of_growth)*angle)*
         self.frame += 1
+
+class Poubelle() :
+    def __init__(self,color,pos,img) :
+        self.color=color
+        self.pos=pos
+        self.img=img
+        self.woobling=False
+        self.timer=0
+    def render(self) :
+        if self.woobling :
+            temp = pygame.transform.rotate(self.img,random.randrange(-2*self.timer,2*self.timer))
+            center_blit(SCREEN,temp,self.pos)
+            self.timer -=1
+            if self.timer==0:
+                self.woobling=False
+        else :
+            center_blit(SCREEN,self.img,self.pos)
+    def wooble(self) :
+        self.timer = 15
+        self.woobling=True
 
 class Game() :
     def __init__(self) :
@@ -464,9 +553,21 @@ class Game() :
         self.current_trash = self.trashs[0]
         self.old_trash = False
         self.trash_change_timer = self.base_trash_change_timer
+        self.current_trash_change_timer = self.base_trash_change_timer
         self.death_timer = 10
 
-        self.ANIMATIONS = []
+        self.ANIMATIONS = {
+            "dash":[],
+            "pop":[]
+        }
+
+        self.POUBELLES = [
+            Poubelle( "jaune",pos_poubelles[ "jaune"],rotated_emb),
+            Poubelle( "orange",pos_poubelles[ "orange"],rotated_pap),
+            Poubelle( "vert",pos_poubelles[ "vert"],rotated_ver),
+            Poubelle( "gris",pos_poubelles[ "gris"],rotated_men),
+            Poubelle( "marron",pos_poubelles[ "marron"],rotated_bio)
+        ]
 
         self.balls = BB.BouncyBalls(
             SCREEN,
@@ -500,23 +601,28 @@ class Game() :
             new = random.choice(self.trashs)
         self.current_trash = new
         self.current_trash.frame=0
+        #Reduce the base change time
+        if self.current_trash_change_timer > MIN_CHANGE_TIME :
+            self.current_trash_change_timer -= REDUCE_TIMER_ON_NEW_TRASH
         #Reset trash change timer
-        self.trash_change_timer = self.base_trash_change_timer
+        self.trash_change_timer = self.current_trash_change_timer
+
     
     def good(self) :
         score_won = self.trash_change_timer * self.mult
         #Give feedback
-        short_good_1.play()
+        random.choice(pop).play()
+        #short_good_1.play()
         self.leds.set_mode_flash(self.current_trash.good_value)
-        self.ANIMATIONS.append(Pop(20,score_font.render(f"+{score_won} !",1,BLUE,COLOR_BG),TRASH_POS))
-        self.ANIMATIONS.append(Dash(FPS*5,self.current_trash.ball,TRASH_POS,color_directions[self.current_trash.good_value],0.1))
+        #self.ANIMATIONS[1].append(Pop(20,score_font.render(f"+{score_won} !",1,BLUE),TRASH_POS))
+        self.ANIMATIONS["dash"].append(Dash_to(self.current_trash.good_value,TIME_ANIM_DASH,self.current_trash.ball,TRASH_POS,pos_poubelles[self.current_trash.good_value],score_won))
         #Update game status
-        self.score += score_won
-        self.good_trash += 1
-        self.mult += 1
+        #self.score += score_won
+        #self.good_trash += 1
+        #self.mult += 1
         #Update trash
         self.new_trash()
-    
+
     def bad(self) :
         #Give feedback
         short_bad_1.play()
@@ -587,10 +693,30 @@ class Game() :
         SCREEN.blit(to_blit,(60,100))
 
     def step_animations(self) :
-        for i,animation in enumerate(self.ANIMATIONS) :
-                animation.anim()
-                if animation.finished :
-                    self.ANIMATIONS.pop(i)
+        for i,animation in enumerate(self.ANIMATIONS["dash"]) :
+            animation.anim()
+            if animation.finished :
+                if animation.gain!=0 :
+                    self.ANIMATIONS["pop"].append(Pop(TIME_ANIM_POP,score_font.render(f"+{animation.gain} !",1,BLUE),animation.aim))
+                    long_good_1.play()
+                    self.POUBELLES[name_to_int[animation.name]].wooble()
+                    self.leds.set_mode_flash(self.current_trash.good_value)
+                    self.score += animation.gain
+                    self.good_trash += 1
+                    self.mult += 1
+                self.ANIMATIONS["dash"].pop(i)
+        
+        #Drawing current trash
+        self.current_trash.render(self.current_trash_change_timer)
+
+        #Handle poubelles
+        for poubelle in self.POUBELLES :
+            poubelle.render()
+
+        for i,animation in enumerate(self.ANIMATIONS["pop"]) :
+            animation.anim()
+            if animation.finished :
+                self.ANIMATIONS["pop"].pop(i)
     
     def step_balls(self) :
         lower_ball = self.balls.handle_balls(SCREEN)
@@ -606,21 +732,17 @@ class Game() :
             self.trash_change_timer -= 1
 
     def defeat(self) :
-        self.status = "END"
-        self.playing = False
-        self.current_panel = Panel_end(self.elapsed_frame/self.FPS,self.good_trash,self.bad_trash,self.score)  
+        if self.status!="END" :
+            long_bad_1.play()
+            self.status = "END"
+            self.playing = False
+            self.current_panel = Panel_end(self.elapsed_frame/self.FPS,self.good_trash,self.bad_trash,self.score)  
 
     def launch(self) :
         while self.on :
 
             #SCREEN cleanup
             SCREEN.blit(play_screen,(0,0))
-
-            #Drawing current trash
-            self.current_trash.render(600)
-
-            #Handle Animations
-            self.step_animations()
 
             #Drawing upper screen
             self.step_upper_screen()
@@ -633,9 +755,15 @@ class Game() :
                 self.defeat()
 
             if self.playing :
+
                 #Handle trash change
                 self.step_trash()
-                self.elapsed_frame+=1
+                self.elapsed_frame+=1            
+
+                #Handle Animations
+                self.step_animations()
+
+                
             else :
                 #Panels handling
                 match self.status :
@@ -651,7 +779,7 @@ class Game() :
             #DEBUG
             if DEBUG :
                 fps = str(round(self.clock.get_fps(),1))
-                txt = "DEBUG MODE | FPS : "+fps+f" | GAME_STATUS : {self.status}"
+                txt = "DEBUG MODE | FPS : "+fps+f" | GAME_STATUS : {self.status} | trahs_change_timer : {self.trash_change_timer} | elapsed_frame : {self.elapsed_frame}"
                 to_blit=debug_font.render(txt,1,BLACK,COLOR_BG)
                 SCREEN.blit(to_blit,(0,0))
 

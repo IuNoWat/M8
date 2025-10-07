@@ -14,9 +14,8 @@ import BB
 #GAMEPLAY CONSTANTS
 FPS=30
 BALL_RADIUS = 50
-TRASH_CHANGE=4*FPS
-BTN_TIMEOUT=0.5*FPS
-REDUCE_TIMER_ON_NEW_TRASH = 1
+TRASH_CHANGE=6*FPS
+REDUCE_TIMER_ON_NEW_TRASH = 3
 ANTIALIASING = 3
 
 TIME_ANIM_MOOV_CURRENT = 10
@@ -121,7 +120,7 @@ pygame.font.init()
 
 debug_font=pygame.font.Font(DIR+"assets/font/debug.ttf",14)
 score_font=pygame.font.Font(DIR+"assets/font/digit.TTF",120)
-mult_font = pygame.font.Font(DIR+"assets/font/debug.ttf",140)
+mult_font = pygame.font.Font(DIR+"assets/font/debug.ttf",90)
 normal_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",22)
 idle_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",26)
 title_font = pygame.font.Font(DIR+"assets/font/salford_sans_arabic.ttf",80)
@@ -138,6 +137,7 @@ logo = pygame.image.load(DIR+"assets/img_v2/logo.png").convert_alpha()
 title = pygame.image.load(DIR+"assets/img_v2/titre.png").convert_alpha()
 poubelle = pygame.image.load(DIR+"assets/img_v2/poubelle.png").convert_alpha()
 highscore = pygame.image.load(DIR+"assets/img_v2/highscore.png").convert_alpha()
+score = pygame.image.load(DIR+"assets/img_v2/score_placeholder.png").convert_alpha()
 
 trash_emb = pygame.image.load(DIR+"assets/img_v2/emballage.png").convert_alpha()
 trash_pap = pygame.image.load(DIR+"assets/img_v2/papier.png").convert_alpha()
@@ -150,7 +150,8 @@ trash_bio = pygame.image.load(DIR+"assets/img_v2/biodechet.png").convert_alpha()
 idle_screen = pygame.Surface((1080,1920))
 idle_screen.blit(accueil,(0,0))
 center_blit(idle_screen,title,(SCREEN_SIZE[0]/2,210))
-center_blit(idle_screen,highscore,(SCREEN_SIZE[0]/2,900))
+center_blit(idle_screen,highscore,(SCREEN_SIZE[0]/2,930))
+center_blit(idle_screen,score,(SCREEN_SIZE[0]/2,1600))
 
 idle_txt = [
     "                                                                                              ",
@@ -302,6 +303,10 @@ class Dash_to(Anim) : #Spawn an img and throw it in a defined direction
         self.pos=pos
         self.method=self.moove
         self.aim = aim
+        if aim[0]<500 :
+            self.start_pop = [aim[0]+150,aim[1]]
+        else :
+            self.start_pop = [aim[0]-150,aim[1]]
         self.gain=gain
         diff_x = abs(pos[0]-aim[0])
         diff_y = abs(pos[1]-aim[1])
@@ -691,16 +696,16 @@ class Game() :
         to_blit = score_font.render(txt_score,1,WHITE,COLOR_HL)
         SCREEN.blit(to_blit,(230,120))
         #Multiplicator
-        txt_mult = f"x{self.mult}"
+        txt_mult = f"x{str(self.mult).zfill(2)}"
         to_blit = mult_font.render(txt_mult,1,WHITE,COLOR_HL)
-        SCREEN.blit(to_blit,(60,100))
+        SCREEN.blit(to_blit,(60,130))
 
     def step_animations(self) :
         for i,animation in enumerate(self.ANIMATIONS["dash"]) :
             animation.anim()
             if animation.finished :
                 if animation.gain!=0 :
-                    self.ANIMATIONS["pop"].append(Pop(TIME_ANIM_POP,score_font.render(f"+{animation.gain} !",1,BLUE),animation.aim))
+                    self.ANIMATIONS["pop"].append(Pop(TIME_ANIM_POP,score_font.render(f"+{animation.gain} !",1,BLUE),animation.start_pop))
                     long_good_1.play()
                     self.POUBELLES[name_to_int[animation.name]].wooble()
                     self.leds.set_mode_flash(self.current_trash.good_value)

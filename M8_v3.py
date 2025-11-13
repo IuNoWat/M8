@@ -78,16 +78,25 @@ GPIO_btn_led_5="BOARD33"
 #STYLE
 
 #ASSETS POS
-TRASH_POS = (540,850)
+TRASH_POS = (538,797)
 TRASH_STARTING_POINT_Y = 600
 TRASH_DIAMETER = 350
 
+##pos_poubelles = {
+##    "jaune":(1040,503),
+##    "orange":(1046,853),
+##    "vert":(1040,1200),
+##    "gris":(73,1020),
+##    "marron":(73,680)
+##}
+
+
 pos_poubelles = {
-    "jaune":(1040,503),
-    "orange":(1046,853),
-    "vert":(1040,1200),
-    "gris":(73,1020),
-    "marron":(73,680)
+    "jaune":(TRASH_POS[0],TRASH_POS[1]-300),
+    "orange":(TRASH_POS[0]+284,TRASH_POS[1]-96),
+    "vert":(TRASH_POS[0]+176,TRASH_POS[1]+242),
+    "gris":(TRASH_POS[0]-176,TRASH_POS[1]+242),
+    "marron":(TRASH_POS[0]-284,TRASH_POS[1]-96)
 }
 
 name_to_int= {
@@ -140,7 +149,7 @@ accueil = pygame.image.load(DIR+"assets/img_v2/bg.png").convert_alpha()
 
 #panel = pygame.image.load(DIR+"assets/img_v2/panneau.png").convert_alpha() #Panel is loaded in the Panel class
 bandeau = pygame.image.load(DIR+"assets/img_v2/bandeau.png").convert_alpha()
-tuyaux = pygame.image.load(DIR+"assets/img_v2/centre.png").convert_alpha()
+tuyaux = pygame.image.load(DIR+"assets/img_v2/centre_2.png").convert_alpha()
 bout = pygame.image.load(DIR+"assets/img_v2/tuyau.png").convert_alpha()
 logo = pygame.image.load(DIR+"assets/img_v2/logo.png").convert_alpha()
 title = pygame.image.load(DIR+"assets/img_v2/titre.png").convert_alpha()

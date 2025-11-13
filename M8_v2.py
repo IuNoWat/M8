@@ -37,6 +37,15 @@ corress_btn = {
     "5":"marron"
 }
 
+corress_poubelles = {
+    "0":"à la déchetterie",
+    "1":"dans la poubelle \"Emballages\"",
+    "2":"dans la poubelle \"Papiers\"",
+    "3":"dans la poubelle \"Verre\"",
+    "4":"dans la poubelle \"Ménagers\"",
+    "5":"dans la poubelle \"Biodéchets\""
+}
+
 #CONSTANTS
 DIR="/home/pi/Desktop/M8/"
 SCREEN_SIZE=(1080, 1920)
@@ -122,7 +131,7 @@ debug_font=pygame.font.Font(DIR+"assets/font/debug.ttf",14)
 score_font=pygame.font.Font(DIR+"assets/font/digit.TTF",120)
 mult_font = pygame.font.Font(DIR+"assets/font/debug.ttf",90)
 normal_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",22)
-idle_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",26)
+idle_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",30)
 title_font = pygame.font.Font(DIR+"assets/font/salford_sans_arabic.ttf",80)
 
 #ASSETS
@@ -153,22 +162,36 @@ center_blit(idle_screen,title,(SCREEN_SIZE[0]/2,210))
 center_blit(idle_screen,highscore,(SCREEN_SIZE[0]/2,930))
 center_blit(idle_screen,score,(SCREEN_SIZE[0]/2,1600))
 
+#idle_txt = [
+#    "                                                                                              ",
+#    "Chaque pièce de la maison produit des déchets au fil du temps. Même si le mieux",
+#    "est encore d'en produire le moins possible, il est également possible de les trier,",
+#    "pour en valoriser certains.",
+#    "",
+#    "Entraines-toi à les reconnaître et à les trier en un seul coup d'oeil, et tiens le",
+#    "plus longtemsp possible avant d'être submergé !",
+#    "",
+#    "Les déchets font arriver dans la poubelle bleu, trouve où ils doivent être triés et",
+#    "appuie sur le bon bouton avant que le déchet parte dans une décharge ! Sinon, ils",
+#    "vont s'accumuler sur ton écran jusqu'à t'empécher de voir quoi que ce soit.",
+#    "",
+#    "",
+#    "                        Appuie sur le bouton rouge pour commencer !"
+#]
+
 idle_txt = [
-    "                                                                                              ",
-    "Chaque pièce de la maison produit des déchets au fil du temps. Même si le mieux",
-    "est encore d'en produire le moins possible, il est également possible de les trier,",
-    "pour en valoriser certains.",
+    "                                                                     ",
+    "Trier ses déchets par catégories permet de faciliter leur recyclage",
+    "ou leur réemploi.",
     "",
-    "Entraines-toi à les reconnaître et à les trier en un seul coup d'oeil, et tiens le",
-    "plus longtemsp possible avant d'être submergé !",
+    "Pour chaque objet qui apparaît à l'écran, appuie sur la bonne",
+    "catégorie de déchet. Essaie d'atteindre le plus haut score possible.",
+    "Attention ! Trop d'objets mal triés feront déborder ta poubelle.",
     "",
-    "Les déchets font arriver dans la poubelle bleu, trouve où ils doivent être triés et",
-    "appuie sur le bon bouton avant que le déchet parte dans une décharge ! Sinon, ils",
-    "vont s'accumuler sur ton écran jusqu'à t'empécher de voir quoi que ce soit.",
-    "",
-    "",
-    "                        Appuie sur le bouton rouge pour commencer !"
+    "              Appuie sur le bouton rouge pour commencer !"
 ]
+
+
 
 rendered_txt = render_multiple_lines(idle_font,idle_txt,WHITE)
 center_blit(idle_screen,rendered_txt,(SCREEN_SIZE[0]/2,575))
@@ -246,7 +269,7 @@ for key in trash_img :
             "img":pygame.transform.scale(circle,(TRASH_DIAMETER,TRASH_DIAMETER)),
             "ball":ball,
             "good_value":corress_btn[key[:1]],
-            "txt":"C'était dans la poubelle "+corress_btn[key[:1]]
+            "txt":"Ce déchet va dans "+corress_poubelles[key[:1]]
         }
     )
 
@@ -429,7 +452,7 @@ class Panel() :
         self.title=title
         self.txt=txt
         self.panel = pygame.image.load(DIR+"assets/img_v2/panneau.png").convert_alpha()
-        alpha = 240
+        alpha = 245
         self.panel.fill((255,255,255,alpha),None,pygame.BLEND_RGBA_MULT)
         self.panel_size = self.panel.get_size()
     def render(self) :
@@ -444,11 +467,9 @@ class Panel_wrong(Panel) :
         Panel.__init__(self,title="ERREUR !")
         self.txt = [
             "                                                                                         ",
-            "Raté ! Tu as envoyé un déchet dans la mauvaise",
-            "poubelle !",
-            specific_txt, #Ligne de texte specifique définie par déchet
-            " ",
-            " ",
+            "Erreur de tri !",
+            "",
+            f"{specific_txt}", #Ligne de texte specifique définie par déchet
             " ",
             "Appuie sur le bouton rouge pour continuer !"
         ]
@@ -456,17 +477,39 @@ class Panel_wrong(Panel) :
 class Panel_end(Panel) :
     def __init__(self,game_duration,good_nb,bad_nb,score) :
         Panel.__init__(self,title="GAME OVER !")
+        #self.txt = [
+        #    "                                                                                         ",
+        #    f"Tu as fait de ton mieux, mais les déchets ont fini",
+        #    f"par te submerger. Tu as tenu {int(game_duration)} secondes", #Durée de la partie en nombre de secondes
+        #    f"Au final, tu a trié {good_nb} déchets dans la bonne poubelle,", #Nombre de déchets triés dans la bonne poubelle
+        #    f" et tu t'es trompé {bad_nb} fois", #Nombre de déchets triés dans la mauvaise poubelle
+        #    " ",
+        #    f"Ton score final est de {score} points", #Score total
+        #    " ",
+        #    " ",
+        #    "Appuie sur le bouton rouge pour recommencer !
+        #]
         self.txt = [
             "                                                                                         ",
-            f"Tu as fait de ton mieux, mais les déchets ont fini",
-            f"par te submerger. Tu as tenu {int(game_duration)} secondes", #Durée de la partie en nombre de secondes
-            f"Au final, tu a trié {good_nb} déchets dans la bonne poubelle,", #Nombre de déchets triés dans la bonne poubelle
-            f" et tu t'es trompé {bad_nb} fois", #Nombre de déchets triés dans la mauvaise poubelle
-            " ",
-            f"Ton score final est de {score} points", #Score total
-            " ",
-            " ",
-            "Appuie sur le bouton rouge pour recommencer !"
+            "C'est fini !",
+            "", #Durée de la partie en nombre de secondes
+            "Ta poubelle déborde",
+            "",
+            f"Score : {score} points",
+            "",
+            f"Temps de tri : {int(game_duration/60)} min {int(game_duration%60)}",
+            "",
+            f"Erreurs de tri : {bad_nb} déchets",
+            "",
+            f"Bons tris : {good_nb} déchets",
+            "",
+            "Tu as fait de ton mieux, mais garde à l'esprit qu'au-delà du tri, il faut",
+            "envisager la réduction des déchets.", 
+            "",
+            "Réutiliser ou réparer un objet sera toujours moins polluant que de le",
+            "jeter et d'en racheter un autre.",
+            "", 
+            "Appuie sur le bouton rouge pour recommencer."
         ]
 
 #SPECIFIC ENGINE
@@ -774,6 +817,9 @@ class Game() :
                 
             else :
                 #Panels handling
+                #Handle poubelles
+                for poubelle in self.POUBELLES :
+                    poubelle.render()
                 match self.status :
                     case "IDLE" :
                         center_blit(SCREEN,idle_screen,(SCREEN_SIZE[0]/2,SCREEN_SIZE[1]/2))

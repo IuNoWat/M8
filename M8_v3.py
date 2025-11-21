@@ -78,7 +78,7 @@ GPIO_btn_led_5="BOARD33"
 #STYLE
 
 #ASSETS POS
-TRASH_POS = (540,797)
+TRASH_POS = (540,850)
 TRASH_STARTING_POINT_Y = 600
 TRASH_DIAMETER = 350
 
@@ -91,12 +91,14 @@ TRASH_DIAMETER = 350
 ##}
 
 
+
+
 pos_poubelles = {
-    "jaune":(TRASH_POS[0],TRASH_POS[1]-300),
-    "orange":(TRASH_POS[0]+284,TRASH_POS[1]-96),
-    "vert":(TRASH_POS[0]+176,TRASH_POS[1]+242),
-    "gris":(TRASH_POS[0]-176,TRASH_POS[1]+242),
-    "marron":(TRASH_POS[0]-284,TRASH_POS[1]-96)
+    "jaune":(TRASH_POS[0],TRASH_POS[1]-420),
+    "orange":(TRASH_POS[0]+370,TRASH_POS[1]-150),
+    "vert":(TRASH_POS[0]+245,TRASH_POS[1]+329),
+    "gris":(TRASH_POS[0]-245,TRASH_POS[1]+329),
+    "marron":(TRASH_POS[0]-370,TRASH_POS[1]-150)
 }
 
 name_to_int= {
@@ -209,17 +211,17 @@ center_blit(idle_screen,rendered_txt,(SCREEN_SIZE[0]/2,575))
 play_screen = pygame.Surface((1080,1920))
 play_screen.blit(accueil,(0,0))
 pygame.draw.rect(play_screen,COLOR_BG,(0,310,1080,1545))
-center_blit(play_screen,tuyaux,(540,660))
+center_blit(play_screen,tuyaux,(540,800))
 center_blit(play_screen,poubelle,(540,1475))
 blue = pygame.Surface((1080,310-68))
 blue.fill(COLOR_HL)
 play_screen.blit(blue,(0,68))
 
-rotated_emb=pygame.transform.rotate(trash_emb,35)
-rotated_pap=pygame.transform.rotate(trash_pap,0)
-rotated_ver=pygame.transform.rotate(trash_ver,-35)
-rotated_men=pygame.transform.rotate(trash_men,20)
-rotated_bio=pygame.transform.rotate(trash_bio,-20)
+rotated_emb=pygame.transform.rotate(trash_emb,90)#35
+rotated_pap=pygame.transform.rotate(trash_pap,20)
+rotated_ver=pygame.transform.rotate(trash_ver,-60) #-35
+rotated_men=pygame.transform.rotate(trash_men,60) #20
+rotated_bio=pygame.transform.rotate(trash_bio,-20) #-20
 
 #center_blit(play_screen,rotated_emb,(1040,503))
 #center_blit(play_screen,rotated_pap,(1046,853))
@@ -578,6 +580,46 @@ class Panel_end(Panel) :
             "Appuie sur le bouton rouge pour recommencer."
         ]
 
+class Panel_end_highscore(Panel) :
+    def __init__(self,game_duration,good_nb,bad_nb,score,highscore) :
+        Panel.__init__(self,title="GAME OVER - NOUVEAU RECORD !")
+        #self.txt = [
+        #    "                                                                                         ",
+        #    f"Tu as fait de ton mieux, mais les déchets ont fini",
+        #    f"par te submerger. Tu as tenu {int(game_duration)} secondes", #Durée de la partie en nombre de secondes
+        #    f"Au final, tu a trié {good_nb} déchets dans la bonne poubelle,", #Nombre de déchets triés dans la bonne poubelle
+        #    f" et tu t'es trompé {bad_nb} fois", #Nombre de déchets triés dans la mauvaise poubelle
+        #    " ",
+        #    f"Ton score final est de {score} points", #Score total
+        #    " ",
+        #    " ",
+        #    "Appuie sur le bouton rouge pour recommencer !
+        #]
+        self.txt = [
+            "                                                                                         ",
+            "C'est fini, ta poubelle déborde !",
+            "",
+            f"Score : {score} points",
+            f"Temps de tri : {int(game_duration/60)} min {int(game_duration%60)}",
+            f"Erreurs de tri : {bad_nb} déchets",
+            f"Bons tris : {good_nb} déchets",
+            "",
+            "Tu as fait de ton mieux, mais garde à l'esprit qu'au-delà du tri, il faut",
+            "envisager la réduction des déchets.", 
+            "Réutiliser ou réparer un objet sera toujours moins polluant que de le",
+            "jeter et d'en racheter un autre.",
+            "",
+            "Félicitation, tu as atteint un nouveau highscore !",
+            f"Ton score de {score} points te place Xème !",
+            f"1er : {highscore[1][0]} : {highscore[1][1]}",
+            f"2eme : {highscore[2][0]} : {highscore[2][1]}",
+            f"3eme : {highscore[3][0]} : {highscore[3][1]}",
+            f"4eme : {highscore[4][0]} : {highscore[4][1]}",
+            f"5eme : {highscore[5][0]} : {highscore[5][1]}",
+            "",
+            "Appuie sur le bouton rouge pour recommencer."
+        ]
+
 #SPECIFIC ENGINE
 
 
@@ -636,10 +678,38 @@ class Poubelle() :
         self.timer = 15
         self.woobling=True
 
+class Score() :
+    def __init__(self) :
+        self.score_path="/home/pi/Desktop/M8/score.txt"
+        self.raw_data=False
+    
+    def load(self) :
+        file = open(self.score_path,"r")
+        raw_load = file.read()
+        scores = raw_load.split("#")
+        self.raw_data = []
+        for entry in scores :
+            rah = entry.split(":")
+            self.raw_data.append([rah[0],int(rah[1])])
+
+    def save(self) :
+        to_save=self.as_txt()
+        file = open(self.score_path,"w+")
+        file.write(to_save)
+        file.close()
+    
+    def as_txt(self) :
+        to_return = []
+        for entry in self.raw_data :
+            to_return.append(entry[0]+":"+str(entry[1]))
+        return "#".join(to_return)
+
 class Game() :
     def __init__(self) :
         self.on = True
         self.clock = pygame.time.Clock()
+        self.highscore = Score()
+        self.highscore.load()
 
         #GAME DATA
         self.trashs = []
@@ -662,7 +732,7 @@ class Game() :
 
         self.good_trash = 0
         self.bad_trash = 0
-        self.score = 0
+        self.score = 2000
         self.mult = 1
 
         #GAME ENGINE
@@ -792,6 +862,7 @@ class Game() :
                 self.playing = True
                 self.status = "PLAY"
             case "END" :
+                self.highscore.save()
                 self.start()
             case _ :
                 print(f"default : {self.status}")
@@ -853,7 +924,11 @@ class Game() :
             long_bad_1.play()
             self.status = "END"
             self.playing = False
-            self.current_panel = Panel_end(self.elapsed_frame/self.FPS,self.good_trash,self.bad_trash,self.score) 
+            self.current_panel = Panel_end(self.elapsed_frame/self.FPS,self.good_trash,self.bad_trash,self.score)
+            for i,entry in enumerate(self.highscore.raw_data) :
+                if self.score>entry[1] :
+                    self.current_panel = Panel_end_highscore(self.elapsed_frame/self.FPS,self.good_trash,self.bad_trash,self.score,self.highscore.raw_data) 
+             
     
     #def load_score(self) :
     #    file = open("/home/pi/Desktop/M8/scores.txt")
@@ -919,6 +994,7 @@ class Game() :
             #End of loop
             pygame.display.update()
             self.clock.tick(self.FPS)  
+
 
 
 

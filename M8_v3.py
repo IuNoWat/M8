@@ -144,6 +144,7 @@ mult_font = pygame.font.Font(DIR+"assets/font/debug.ttf",90)
 normal_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",22)
 idle_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",30)
 title_font = pygame.font.Font(DIR+"assets/font/salford_sans_arabic.ttf",80)
+highscore_font = pygame.font.Font(DIR+"assets/font/RobotoMono-Bold.ttf",70)
 
 #ASSETS
 #IMG
@@ -151,7 +152,7 @@ accueil = pygame.image.load(DIR+"assets/img_v2/bg.png").convert_alpha()
 
 #panel = pygame.image.load(DIR+"assets/img_v2/panneau.png").convert_alpha() #Panel is loaded in the Panel class
 bandeau = pygame.image.load(DIR+"assets/img_v2/bandeau.png").convert_alpha()
-tuyaux = pygame.image.load(DIR+"assets/img_v2/centre_0.png").convert_alpha()
+tuyaux = pygame.image.load(DIR+"assets/img_v2/centre_3.png").convert_alpha()
 bout = pygame.image.load(DIR+"assets/img_v2/tuyau.png").convert_alpha()
 logo = pygame.image.load(DIR+"assets/img_v2/logo.png").convert_alpha()
 title = pygame.image.load(DIR+"assets/img_v2/titre.png").convert_alpha()
@@ -171,7 +172,7 @@ idle_screen = pygame.Surface((1080,1920))
 idle_screen.blit(accueil,(0,0))
 center_blit(idle_screen,title,(SCREEN_SIZE[0]/2,210))
 center_blit(idle_screen,highscore,(SCREEN_SIZE[0]/2,930))
-center_blit(idle_screen,score,(SCREEN_SIZE[0]/2,1600))
+#center_blit(idle_screen,score,(SCREEN_SIZE[0]/2,1600))
 
 #idle_txt = [
 #    "                                                                                              ",
@@ -581,7 +582,7 @@ class Panel_end(Panel) :
         ]
 
 class Panel_end_highscore(Panel) :
-    def __init__(self,game_duration,good_nb,bad_nb,score,highscore) :
+    def __init__(self,game_duration,good_nb,bad_nb,score,highscore,pos) :
         Panel.__init__(self,title="GAME OVER - NOUVEAU RECORD !")
         #self.txt = [
         #    "                                                                                         ",
@@ -610,7 +611,7 @@ class Panel_end_highscore(Panel) :
             "jeter et d'en racheter un autre.",
             "",
             "Félicitation, tu as atteint un nouveau highscore !",
-            f"Ton score de {score} points te place Xème !",
+            f"Ton score de {score} points te place à la position n°{pos}",
             f"1er : {highscore[1][0]} : {highscore[1][1]}",
             f"2eme : {highscore[2][0]} : {highscore[2][1]}",
             f"3eme : {highscore[3][0]} : {highscore[3][1]}",
@@ -703,6 +704,12 @@ class Score() :
         for entry in self.raw_data :
             to_return.append(entry[0]+":"+str(entry[1]))
         return "#".join(to_return)
+    
+    def check_score(self,actual_score) :
+        for i,entry in enumerate(self.raw_data) :
+            if actual_score>entry[1] :
+                return i
+        return False
 
 class Game() :
     def __init__(self) :
@@ -723,6 +730,15 @@ class Game() :
         self.leds = Leds(GPIO_led,22)
         self.leds.test()
     
+    def create_idle_highscore(self) :
+        HS = pygame.Surface((850,650))
+        HS.fill(COLOR_HL)
+        for i,entry in enumerate(self.highscore.raw_data) :
+            txt = entry[0]+" ________ "+str(entry[1])
+            rendered = highscore_font.render(txt,RED,1)
+            HS.blit(rendered,(50,50+i*100))
+        return HS
+
     def start(self) :
         
         #GAME STATUS
@@ -763,7 +779,10 @@ class Game() :
             ball_mass,
             ball_elasticity,
             shape_friction
-        )           
+        )
+
+        to_blit=self.create_idle_highscore()
+        center_blit(idle_screen,to_blit,(SCREEN_SIZE[0]/2,1350))
 
     def connect_GPIO(self) :
         btn_1=gpio.Button(GPIO_btn_1,pull_up=True,bounce_time=0.05)
@@ -925,14 +944,13 @@ class Game() :
             self.status = "END"
             self.playing = False
             self.current_panel = Panel_end(self.elapsed_frame/self.FPS,self.good_trash,self.bad_trash,self.score)
-            for i,entry in enumerate(self.highscore.raw_data) :
-                if self.score>entry[1] :
-                    self.current_panel = Panel_end_highscore(self.elapsed_frame/self.FPS,self.good_trash,self.bad_trash,self.score,self.highscore.raw_data) 
+            pos_score = self.highscore.check_score(self.score)
+            if pos_score != False :
+                self.current_panel = Panel_end_highscore(self.elapsed_frame/self.FPS,self.good_trash,self.bad_trash,self.score,self.highscore.raw_data,pos_score)
+            to_blit=self.create_idle_highscore()
+            center_blit(idle_screen,to_blit,(SCREEN_SIZE[0]/2,1350))
              
     
-    #def load_score(self) :
-    #    file = open("/home/pi/Desktop/M8/scores.txt")
-
 
 
     def launch(self) :

@@ -1,1 +1,1 @@
-sudo /home/pi/Desktop/M8_env/bin/python /home/pi/Desktop/M8/M8.py
+sudo /home/pi/Desktop/M8_env/bin/python /home/pi/Desktop/M8/M8_v3.py 

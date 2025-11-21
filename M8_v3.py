@@ -78,7 +78,7 @@ GPIO_btn_led_5="BOARD33"
 #STYLE
 
 #ASSETS POS
-TRASH_POS = (538,797)
+TRASH_POS = (540,797)
 TRASH_STARTING_POINT_Y = 600
 TRASH_DIAMETER = 350
 
@@ -149,7 +149,7 @@ accueil = pygame.image.load(DIR+"assets/img_v2/bg.png").convert_alpha()
 
 #panel = pygame.image.load(DIR+"assets/img_v2/panneau.png").convert_alpha() #Panel is loaded in the Panel class
 bandeau = pygame.image.load(DIR+"assets/img_v2/bandeau.png").convert_alpha()
-tuyaux = pygame.image.load(DIR+"assets/img_v2/centre_2.png").convert_alpha()
+tuyaux = pygame.image.load(DIR+"assets/img_v2/centre_0.png").convert_alpha()
 bout = pygame.image.load(DIR+"assets/img_v2/tuyau.png").convert_alpha()
 logo = pygame.image.load(DIR+"assets/img_v2/logo.png").convert_alpha()
 title = pygame.image.load(DIR+"assets/img_v2/titre.png").convert_alpha()

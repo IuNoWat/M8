@@ -11,6 +11,8 @@ cffi==1.17.1
 colorzero==2.0
 gpiozero==2.0.1
 lgpio==0.2.2.0
+numpy==2.3.3
+pillow==11.3.0
 pycparser==2.22
 pyftdi==0.56.0
 pygame==2.6.1

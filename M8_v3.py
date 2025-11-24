@@ -17,6 +17,7 @@ BALL_RADIUS = 50
 TRASH_CHANGE=8*FPS
 REDUCE_TIMER_ON_NEW_TRASH = 5
 ANTIALIASING = 3
+MAX_MULTIPLICATOR = 10
 
 TIME_ANIM_MOOV_CURRENT = 10
 TIME_ANIM_GROWTH_CURRENT = 5
@@ -232,10 +233,35 @@ pop=[
     pygame.mixer.Sound(DIR+"assets/sound/pop_2.mp3"),
     pygame.mixer.Sound(DIR+"assets/sound/pop_3.mp3")
 ]
+
+
 short_good_1=pygame.mixer.Sound(DIR+"assets/sound/low_fb_pos.wav")
 short_bad_1=pygame.mixer.Sound(DIR+"assets/sound/low_fb_neg.wav")
-long_good_1=pygame.mixer.Sound(DIR+"assets/sound/chord_fb_pos.wav")
+#long_good_1=pygame.mixer.Sound(DIR+"assets/sound/chord_fb_pos.wav")
 long_bad_1=pygame.mixer.Sound(DIR+"assets/sound/chord_fb_neg.wav")
+
+nice=pygame.mixer.Sound(DIR+"assets/sound_v2/nice.mp3")
+sound_highscore=pygame.mixer.Sound(DIR+"assets/sound_v2/highscore.mp3")
+sound_defeat=pygame.mixer.Sound(DIR+"assets/sound_v2/loose.mp3")
+sound_error=pygame.mixer.Sound(DIR+"assets/sound_v2/error.mp3")
+
+nice.set_volume(0.4)
+sound_highscore.set_volume(0.4)
+sound_defeat.set_volume(0.4)
+sound_error.set_volume(0.4)
+
+good = [
+    pygame.mixer.Sound(DIR+"assets/sound_v2/good_0.mp3"),
+    pygame.mixer.Sound(DIR+"assets/sound_v2/good_1.mp3"),
+    pygame.mixer.Sound(DIR+"assets/sound_v2/good_2.mp3"),
+    pygame.mixer.Sound(DIR+"assets/sound_v2/good_3.mp3"),
+    pygame.mixer.Sound(DIR+"assets/sound_v2/good_4.mp3"),
+    pygame.mixer.Sound(DIR+"assets/sound_v2/good_5.mp3"),
+    pygame.mixer.Sound(DIR+"assets/sound_v2/good_6.mp3"),
+    pygame.mixer.Sound(DIR+"assets/sound_v2/good_7.mp3"),
+    pygame.mixer.Sound(DIR+"assets/sound_v2/good_8.mp3"),
+    pygame.mixer.Sound(DIR+"assets/sound_v2/good_9.mp3"),
+]
 
 trash_img = {
     "1_1_img" : pygame.image.load(DIR+"assets/trash_v2/1_1.png").convert_alpha(),
@@ -452,7 +478,8 @@ class Leds() : # Class used to handle the ledstrip,
         self.RED=rpi.Color(255,0,0)
         self.BLUE=rpi.Color(0,0,255)
         self.PURPLE=rpi.Color(255,0,255)
-        self.WHITE=rpi.Color(150,150,150)
+        self.WHITE=rpi.Color(50,50,50)
+        self.BASE_WHITE=rpi.Color(25,25,25)
         self.BLACK=rpi.Color(0,0,0)
         self.YELLOW=rpi.Color(255,255,0)
         self.ORANGE=rpi.Color(255,255,50)
@@ -489,12 +516,12 @@ class Leds() : # Class used to handle the ledstrip,
         self.strip.show()
     def base(self) :
         for i in range(0,self.nb_of_leds) :
-            self.strip.setPixelColor(i,self.WHITE)
+            self.strip.setPixelColor(i,self.BASE_WHITE)
         for led in self.btn_led :
             led.on()
     def step(self) : # Called each frame, use self.base_colors or loop through an aniamtion defined in self.current_mode
-        for i in range(0,self.nb_of_leds) :
-            self.strip.setPixelColor(i,self.BLACK)
+        #for i in range(0,self.nb_of_leds) :
+        #    self.strip.setPixelColor(i,self.BLACK)
         match self.current_mode :
             case "flash" :
                 self.flash()
@@ -507,7 +534,7 @@ class Leds() : # Class used to handle the ledstrip,
         self.strip.show()
     def set_mode_flash(self,color) : #Launch the flash mode, a flash of a specified color
         self.count=5
-        self.current_color=self.color_to_led(color)
+        self.current_color=color
         self.current_mode="flash"
     def flash(self) :
         self.count=self.count-1
@@ -516,20 +543,22 @@ class Leds() : # Class used to handle the ledstrip,
         if self.count<=0 :
             self.current_mode=False
     def set_mode_blink(self) : # Launch the blink mode, make all the leds blink
-        self.count=15
+        self.count=30
         self.current_mode="blink"
+        self.status_strip=True
     def blink(self) :
         self.count=self.count-1
-        if self.count%3==0 :
-            for i in range(0,self.nb_of_leds) :
-                self.strip.setPixelColor(i,self.BLACK)
+        if self.count%5==0 :
             for led in self.btn_led :
-                led.off()
-        else :
-            for i in range(0,self.nb_of_leds) :
-                self.strip.setPixelColor(i,self.RED)
-            for led in self.btn_led :
-                led.on()
+                led.toggle()
+            if self.status_strip :
+                for i in range(0,self.nb_of_leds) :
+                    self.strip.setPixelColor(i,self.RED)
+                self.status_strip=False
+            else :
+                for i in range(0,self.nb_of_leds) :
+                    self.strip.setPixelColor(i,self.WHITE)
+                self.status_strip=True
         if self.count<=0 :
             self.current_mode=False
     def set_mode_idle(self) :
@@ -829,6 +858,7 @@ class Game() :
         self.death_timer = 10
         self.idle_timer = 0
         self.current_letter = 0
+        self.frames_since_new_trash = 0
 
         self.ANIMATIONS = {
             "dash":[],
@@ -858,20 +888,21 @@ class Game() :
         center_blit(idle_screen,to_blit,(SCREEN_SIZE[0]/2,1400))
 
     def connect_GPIO(self) :
-        btn_1=gpio.Button(GPIO_btn_1,pull_up=True,bounce_time=0.05)
-        btn_2=gpio.Button(GPIO_btn_2,pull_up=True,bounce_time=0.05)
-        btn_3=gpio.Button(GPIO_btn_3,pull_up=True,bounce_time=0.05)
-        btn_4=gpio.Button(GPIO_btn_4,pull_up=True,bounce_time=0.05)
-        btn_5=gpio.Button(GPIO_btn_5,pull_up=True,bounce_time=0.05)
-        btn_0=gpio.Button(GPIO_btn_0,pull_up=True,bounce_time=0.05)
-        btn_1.when_pressed = self.pressed_1
-        btn_2.when_pressed = self.pressed_2
-        btn_3.when_pressed = self.pressed_3
-        btn_4.when_pressed = self.pressed_4
-        btn_5.when_pressed = self.pressed_5
-        btn_0.when_pressed = self.pressed_start
+        self.btn_1=gpio.Button(GPIO_btn_1,pull_up=True,bounce_time=0.05)
+        self.btn_2=gpio.Button(GPIO_btn_2,pull_up=True,bounce_time=0.05)
+        self.btn_3=gpio.Button(GPIO_btn_3,pull_up=True,bounce_time=0.05)
+        self.btn_4=gpio.Button(GPIO_btn_4,pull_up=True,bounce_time=0.05)
+        self.btn_5=gpio.Button(GPIO_btn_5,pull_up=True,bounce_time=0.05)
+        self.btn_0=gpio.Button(GPIO_btn_0,pull_up=True,bounce_time=0.05)
+        self.btn_1.when_pressed = self.pressed_1
+        self.btn_2.when_pressed = self.pressed_2
+        self.btn_3.when_pressed = self.pressed_3
+        self.btn_4.when_pressed = self.pressed_4
+        self.btn_5.when_pressed = self.pressed_5
+        self.btn_0.when_pressed = self.pressed_start
     
     def new_trash(self) :
+        self.frames_since_new_trash=0
         #Save old trash
         self.old_trash=self.current_trash
         #Select new trash, must be different from precedent
@@ -890,9 +921,10 @@ class Game() :
     def good(self) :
         score_won = self.trash_change_timer * self.mult
         #Give feedback
-        random.choice(pop).play()
+        #random.choice(pop).play()
         #short_good_1.play()
-        self.leds.set_mode_flash(self.current_trash.good_value)
+        good[self.mult-1].play()
+        self.leds.set_mode_flash(self.leds.WHITE)
         #self.ANIMATIONS[1].append(Pop(20,score_font.render(f"+{score_won} !",1,BLUE),TRASH_POS))
         self.ANIMATIONS["dash"].append(Dash_to(self.current_trash.good_value,TIME_ANIM_DASH,self.current_trash.ball,TRASH_POS,pos_poubelles[self.current_trash.good_value],score_won))
         #Update game status
@@ -904,7 +936,7 @@ class Game() :
 
     def bad(self) :
         #Give feedback
-        short_bad_1.play()
+        sound_error.play()
         self.leds.set_mode_blink()
         self.balls._create_ball(self.current_trash.ball,TRASH_POS)
         #Update game status
@@ -919,7 +951,7 @@ class Game() :
     
     def late(self) :
         #Give feedback
-        short_bad_1.play()
+        sound_error.play()
         self.leds.set_mode_blink()
         self.balls._create_ball(self.current_trash.ball,TRASH_POS)
         #Update game status
@@ -929,6 +961,8 @@ class Game() :
         self.new_trash()
 
     def pressed_1(self,arg) :
+        if self.btn_2.is_pressed and self.btn_5.is_pressed :
+            self.start()
         self.pressed("1")
     def pressed_2(self,arg) :
         self.pressed("2")
@@ -939,26 +973,29 @@ class Game() :
     def pressed_5(self,arg) :
         self.pressed("5")    
     def pressed(self,btn) :
-        if self.playing :
-            if self.current_trash.check_value(btn) :
-                self.good()
-            else :
-                self.bad()
-        elif self.status=="HIGHSCORE" :
-            match btn :
-                case "2" :
-                    self.current_letter+=1
-                case "5" :
-                    self.current_letter-=1
-                case "3" :
-                    self.name=self.name[:-1]
-                case "4" :
-                    self.name=self.name[:-1]
-                case _ :
-                    pass
-            self.current_letter=self.current_letter%len(alphabet)
+        random.choice(pop).play()
+        if self.frames_since_new_trash > TIME_ANIM_MOOV_CURRENT + TIME_ANIM_GROWTH_CURRENT :
+            if self.playing :
+                if self.current_trash.check_value(btn) :
+                    self.good()
+                else :
+                    self.bad()
+            elif self.status=="HIGHSCORE" :
+                match btn :
+                    case "2" :
+                        self.current_letter+=1
+                    case "5" :
+                        self.current_letter-=1
+                    case "3" :
+                        self.name=self.name[:-1]
+                    case "4" :
+                        self.name=self.name[:-1]
+                    case _ :
+                        pass
+                self.current_letter=self.current_letter%len(alphabet)
     
     def pressed_start(self,arg) :
+        random.choice(pop).play()
         match self.status :
             case "IDLE" :
                 self.playing = True
@@ -999,12 +1036,14 @@ class Game() :
             if animation.finished :
                 if animation.gain!=0 :
                     self.ANIMATIONS["pop"].append(Pop(TIME_ANIM_POP,score_font.render(f"+{animation.gain} !",1,BLUE),animation.start_pop))
-                    long_good_1.play()
+                    nice.play()
                     self.POUBELLES[name_to_int[animation.name]].wooble()
-                    self.leds.set_mode_flash(self.current_trash.good_value)
+                    self.leds.set_mode_flash(self.leds.GREEN)
                     self.score += animation.gain
                     self.good_trash += 1
                     self.mult += 1
+                    if self.mult>MAX_MULTIPLICATOR :
+                        self.mult=MAX_MULTIPLICATOR
                 self.ANIMATIONS["dash"].pop(i)
         
         #Drawing current trash
@@ -1040,7 +1079,6 @@ class Game() :
 
     def defeat(self) :
         if self.status!="END" and self.status!="HIGHSCORE" :
-            long_bad_1.play()
             self.status = "END"
             self.playing = False
             self.current_panel = Panel_end(self.elapsed_frame/self.FPS,self.good_trash,self.bad_trash,self.score)
@@ -1048,6 +1086,9 @@ class Game() :
             if pos_score != False :
                 self.current_panel = Panel_end_highscore(self.elapsed_frame/self.FPS,self.good_trash,self.bad_trash,self.score,self.highscore.raw_data,pos_score)
                 self.status = "HIGHSCORE"
+                sound_highscore.play()
+            else :
+                sound_defeat.play()
             to_blit=self.create_idle_highscore()
             center_blit(idle_screen,to_blit,(SCREEN_SIZE[0]/2,1400))
 
@@ -1095,11 +1136,13 @@ class Game() :
                         to_blit = self.current_panel.render()
                         center_blit(SCREEN,to_blit,TRASH_POS)
                         self.step_name_select()
+            
+            self.frames_since_new_trash+=1
 
             #DEBUG
             if DEBUG :
                 fps = str(round(self.clock.get_fps(),1))
-                txt = "DEBUG MODE | FPS : "+fps+f" | GAME_STATUS : {self.status} | highscore : {self.highscore.as_txt()} | elapsed_frame : {self.elapsed_frame}"
+                txt = "DEBUG MODE | FPS : "+fps+f" | GAME_STATUS : {self.status} | highscore : {self.highscore.as_txt()} | frames since new trash : {self.frames_since_new_trash}"
                 to_blit=debug_font.render(txt,1,BLACK,COLOR_BG)
                 SCREEN.blit(to_blit,(0,0))
 

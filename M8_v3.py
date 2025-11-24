@@ -14,8 +14,8 @@ import BB
 #GAMEPLAY CONSTANTS
 FPS=30
 BALL_RADIUS = 50
-TRASH_CHANGE=6*FPS
-REDUCE_TIMER_ON_NEW_TRASH = 3
+TRASH_CHANGE=8*FPS
+REDUCE_TIMER_ON_NEW_TRASH = 5
 ANTIALIASING = 3
 
 TIME_ANIM_MOOV_CURRENT = 10
@@ -23,7 +23,7 @@ TIME_ANIM_GROWTH_CURRENT = 5
 TIME_ANIM_DASH = FPS
 TIME_ANIM_POP = FPS/2
 
-MIN_CHANGE_TIME = TIME_ANIM_MOOV_CURRENT + TIME_ANIM_GROWTH_CURRENT + 5
+MIN_CHANGE_TIME = TIME_ANIM_MOOV_CURRENT + TIME_ANIM_GROWTH_CURRENT + 20
 
 #STYLE CONSTANTS
 WIDTH_ARC = 10
@@ -78,27 +78,17 @@ GPIO_btn_led_5="BOARD33"
 #STYLE
 
 #ASSETS POS
-TRASH_POS = (540,850)
-TRASH_STARTING_POINT_Y = 600
+TRASH_POS = (540,830)
+TRASH_STARTING_POINT_X = 540
+TRASH_STARTING_POINT_Y = -200
 TRASH_DIAMETER = 350
-
-##pos_poubelles = {
-##    "jaune":(1040,503),
-##    "orange":(1046,853),
-##    "vert":(1040,1200),
-##    "gris":(73,1020),
-##    "marron":(73,680)
-##}
-
-
-
 
 pos_poubelles = {
     "jaune":(TRASH_POS[0],TRASH_POS[1]-420),
-    "orange":(TRASH_POS[0]+370,TRASH_POS[1]-150),
-    "vert":(TRASH_POS[0]+245,TRASH_POS[1]+329),
-    "gris":(TRASH_POS[0]-245,TRASH_POS[1]+329),
-    "marron":(TRASH_POS[0]-370,TRASH_POS[1]-150)
+    "orange":(TRASH_POS[0]+380,TRASH_POS[1]-135),
+    "vert":(TRASH_POS[0]+228,TRASH_POS[1]+325),
+    "gris":(TRASH_POS[0]-225,TRASH_POS[1]+325),
+    "marron":(TRASH_POS[0]-380,TRASH_POS[1]-135)
 }
 
 name_to_int= {
@@ -131,6 +121,7 @@ BLACK=pygame.Color("Black")
 GREEN=pygame.Color("Green")
 RED=pygame.Color("Red")
 BLUE=pygame.Color("Blue")
+YELLOW=pygame.Color("Yellow")
 COLOR_BG=pygame.Color(242,193,202,255)
 COLOR_HL=pygame.Color(38,53,139,255)
 
@@ -144,7 +135,8 @@ mult_font = pygame.font.Font(DIR+"assets/font/debug.ttf",90)
 normal_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",22)
 idle_font = pygame.font.Font(DIR+"assets/font/bai_jamburee_medium.ttf",30)
 title_font = pygame.font.Font(DIR+"assets/font/salford_sans_arabic.ttf",80)
-highscore_font = pygame.font.Font(DIR+"assets/font/RobotoMono-Bold.ttf",70)
+HIGHSCORE_FONT_SIZE=70
+highscore_font = pygame.font.Font(DIR+"assets/font/RobotoMono-Bold.ttf",HIGHSCORE_FONT_SIZE)
 
 #ASSETS
 #IMG
@@ -342,6 +334,35 @@ for key in trash_img :
         }
     )
 
+alphabet = [
+    "_",
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z"
+]
 
 
 #ENGINE
@@ -474,15 +495,15 @@ class Leds() : # Class used to handle the ledstrip,
     def step(self) : # Called each frame, use self.base_colors or loop through an aniamtion defined in self.current_mode
         for i in range(0,self.nb_of_leds) :
             self.strip.setPixelColor(i,self.BLACK)
-            self.base()
-        if self.current_mode!=False :
-            match self.current_mode :
-                case "flash" :
-                    self.flash()
-                case "blink" :
-                    self.blink()
-                case _ :
-                    pass
+        match self.current_mode :
+            case "flash" :
+                self.flash()
+            case "blink" :
+                self.blink()
+            case "idle" :
+                self.idle()
+            case _ :
+                self.base()
         self.strip.show()
     def set_mode_flash(self,color) : #Launch the flash mode, a flash of a specified color
         self.count=5
@@ -511,6 +532,36 @@ class Leds() : # Class used to handle the ledstrip,
                 led.on()
         if self.count<=0 :
             self.current_mode=False
+    def set_mode_idle(self) :
+        self.count=124
+        self.current_mode="idle"
+    def idle(self) :
+        self.count=self.count-2
+        #btn_leds
+        for led in self.btn_led :
+            led.off()
+        self.btn_led[int(self.count/25)].on()
+        #ledstrips
+        for i in range(0,self.nb_of_leds) :
+            self.strip.setPixelColor(i,self.BLACK)
+        index=int(self.count/3)
+        if self.count<62 :
+            self.strip.setPixelColor(index+1,rpi.Color(0,50,0))
+            self.strip.setPixelColor(index-1,rpi.Color(0,50,0))
+            self.strip.setPixelColor(index+2,rpi.Color(0,25,0))
+            self.strip.setPixelColor(index-2,rpi.Color(0,25,0))
+            self.strip.setPixelColor(index,self.GREEN)
+        else :
+            self.strip.setPixelColor(40-index+1,rpi.Color(0,50,0))
+            self.strip.setPixelColor(40-index-1,rpi.Color(0,50,0))
+            self.strip.setPixelColor(40-index+2,rpi.Color(0,25,0))
+            self.strip.setPixelColor(40-index-2,rpi.Color(0,25,0))
+            self.strip.setPixelColor(40-index,self.GREEN)
+        #start_led
+        if self.count%62==0 :
+            self.start_led.toggle()
+        if self.count<=0 :
+            self.set_mode_idle()         
     def close(self) :
         for i in range(0,self.nb_of_leds) :
             self.strip.setPixelColor(i,self.BLACK)
@@ -583,7 +634,7 @@ class Panel_end(Panel) :
 
 class Panel_end_highscore(Panel) :
     def __init__(self,game_duration,good_nb,bad_nb,score,highscore,pos) :
-        Panel.__init__(self,title="GAME OVER - NOUVEAU RECORD !")
+        Panel.__init__(self,title="NOUVEAU RECORD !")
         #self.txt = [
         #    "                                                                                         ",
         #    f"Tu as fait de ton mieux, mais les déchets ont fini",
@@ -605,20 +656,22 @@ class Panel_end_highscore(Panel) :
             f"Erreurs de tri : {bad_nb} déchets",
             f"Bons tris : {good_nb} déchets",
             "",
-            "Tu as fait de ton mieux, mais garde à l'esprit qu'au-delà du tri, il faut",
-            "envisager la réduction des déchets.", 
-            "Réutiliser ou réparer un objet sera toujours moins polluant que de le",
-            "jeter et d'en racheter un autre.",
-            "",
             "Félicitation, tu as atteint un nouveau highscore !",
-            f"Ton score de {score} points te place à la position n°{pos}",
-            f"1er : {highscore[1][0]} : {highscore[1][1]}",
-            f"2eme : {highscore[2][0]} : {highscore[2][1]}",
-            f"3eme : {highscore[3][0]} : {highscore[3][1]}",
-            f"4eme : {highscore[4][0]} : {highscore[4][1]}",
-            f"5eme : {highscore[5][0]} : {highscore[5][1]}",
+            f"Ton score de {score} points te place à la position n°{pos} !",
+            f"",
+            f"Entre les trois premières lettres de ton prénom.",
+            f"\"BIODECHETS\" et \"DECHETTERIE\" pour selectionner une lettre",
+            f"\"MENAGERS\" ou \"VERRE\" pour selectionner une lettre",
+            f"\"BOUTON ROUGE\" pour valider ta lettre",
+            #f"1er : {highscore[1][0]} : {highscore[1][1]}",
+            #f"2eme : {highscore[2][0]} : {highscore[2][1]}",
+            #f"3eme : {highscore[3][0]} : {highscore[3][1]}",
+            #f"4eme : {highscore[4][0]} : {highscore[4][1]}",
+            #f"5eme : {highscore[5][0]} : {highscore[5][1]}",
             "",
-            "Appuie sur le bouton rouge pour recommencer."
+            "",
+            "",
+            ""
         ]
 
 #SPECIFIC ENGINE
@@ -643,8 +696,9 @@ class Trash() : #Used to store all the informations needed for each trash
             return False
     def render(self,total_timer) :
         if self.frame < self.frame_of_movement :
-            step=TRASH_STARTING_POINT_Y/self.frame_of_movement
-            temp_pos = (TRASH_POS[0],TRASH_POS[1]-(TRASH_STARTING_POINT_Y-(step*self.frame)))
+            step_y=TRASH_STARTING_POINT_Y/self.frame_of_movement
+            step_x=TRASH_STARTING_POINT_X/self.frame_of_movement
+            temp_pos = (TRASH_POS[0]-(TRASH_STARTING_POINT_X-(step_x*self.frame)),TRASH_POS[1]-(TRASH_STARTING_POINT_Y-(step_y*self.frame)))
             center_blit(SCREEN,self.ball,temp_pos)
         elif self.frame < self.frame_of_movement + self.frame_of_growth :
             center_blit(SCREEN,pygame.transform.scale_by(self.img,1-(0.1*(15-self.frame))),TRASH_POS)
@@ -692,6 +746,7 @@ class Score() :
         for entry in scores :
             rah = entry.split(":")
             self.raw_data.append([rah[0],int(rah[1])])
+        file.close()
 
     def save(self) :
         to_save=self.as_txt()
@@ -708,8 +763,13 @@ class Score() :
     def check_score(self,actual_score) :
         for i,entry in enumerate(self.raw_data) :
             if actual_score>entry[1] :
-                return i
+                return i+1
         return False
+    
+    def add_score(self,score,index,name) :
+        self.raw_data.insert(index-1,[name,score])
+        del self.raw_data[-1]
+        self.save()
 
 class Game() :
     def __init__(self) :
@@ -731,12 +791,21 @@ class Game() :
         self.leds.test()
     
     def create_idle_highscore(self) :
-        HS = pygame.Surface((850,650))
+        HS = pygame.Surface((1000,850))
         HS.fill(COLOR_HL)
         for i,entry in enumerate(self.highscore.raw_data) :
-            txt = entry[0]+" ________ "+str(entry[1])
-            rendered = highscore_font.render(txt,RED,1)
-            HS.blit(rendered,(50,50+i*100))
+            string_score = str(entry[1]).zfill(6)
+            txt = f"{entry[0]} ________ {string_score[:3]} {string_score[3:]}"
+            match i :
+                case 0 :
+                    rendered = highscore_font.render(txt,1,RED)
+                case 1 :
+                    rendered = highscore_font.render(txt,1,YELLOW)
+                case 2 :
+                    rendered = highscore_font.render(txt,1,WHITE)
+                case _ :
+                    rendered = highscore_font.render(txt,1,COLOR_BG)
+            center_blit(HS,rendered,(500,HIGHSCORE_FONT_SIZE+i*HIGHSCORE_FONT_SIZE*2))
         return HS
 
     def start(self) :
@@ -748,8 +817,9 @@ class Game() :
 
         self.good_trash = 0
         self.bad_trash = 0
-        self.score = 2000
+        self.score = 0
         self.mult = 1
+        self.name=""
 
         #GAME ENGINE
         self.current_trash = self.trashs[0]
@@ -758,11 +828,14 @@ class Game() :
         self.current_trash_change_timer = self.base_trash_change_timer
         self.death_timer = 10
         self.idle_timer = 0
+        self.current_letter = 0
 
         self.ANIMATIONS = {
             "dash":[],
             "pop":[]
         }
+
+        self.leds.set_mode_idle()
 
         self.POUBELLES = [
             Poubelle( "jaune",pos_poubelles[ "jaune"],rotated_emb),
@@ -782,7 +855,7 @@ class Game() :
         )
 
         to_blit=self.create_idle_highscore()
-        center_blit(idle_screen,to_blit,(SCREEN_SIZE[0]/2,1350))
+        center_blit(idle_screen,to_blit,(SCREEN_SIZE[0]/2,1400))
 
     def connect_GPIO(self) :
         btn_1=gpio.Button(GPIO_btn_1,pull_up=True,bounce_time=0.05)
@@ -871,18 +944,39 @@ class Game() :
                 self.good()
             else :
                 self.bad()
+        elif self.status=="HIGHSCORE" :
+            match btn :
+                case "2" :
+                    self.current_letter+=1
+                case "5" :
+                    self.current_letter-=1
+                case "3" :
+                    self.name=self.name[:-1]
+                case "4" :
+                    self.name=self.name[:-1]
+                case _ :
+                    pass
+            self.current_letter=self.current_letter%len(alphabet)
     
     def pressed_start(self,arg) :
         match self.status :
             case "IDLE" :
                 self.playing = True
                 self.status = "PLAY"
+                self.leds.current_mode = False
             case "PAUSE" :
                 self.playing = True
                 self.status = "PLAY"
             case "END" :
-                self.highscore.save()
                 self.start()
+            case "HIGHSCORE" :
+                if len(self.name)==3 :
+                    name_to_save = f"{self.name:{"_"}<3}"
+                    pos_to_save=self.highscore.check_score(self.score)
+                    self.highscore.add_score(self.score,pos_to_save,name_to_save)
+                    self.start()
+                else :
+                    self.name+=alphabet[self.current_letter]                 
             case _ :
                 print(f"default : {self.status}")
     
@@ -937,9 +1031,15 @@ class Game() :
             self.late()
         else :
             self.trash_change_timer -= 1
+    
+    def step_name_select(self) :
+        to_blit = highscore_font.render(self.name,BLACK,1)
+        center_blit(SCREEN,to_blit,(SCREEN_SIZE[0]/2,1075))
+        to_blit = highscore_font.render(alphabet[self.current_letter],BLACK,1)
+        center_blit(SCREEN,to_blit,(SCREEN_SIZE[0]/2,1175))
 
     def defeat(self) :
-        if self.status!="END" :
+        if self.status!="END" and self.status!="HIGHSCORE" :
             long_bad_1.play()
             self.status = "END"
             self.playing = False
@@ -947,11 +1047,9 @@ class Game() :
             pos_score = self.highscore.check_score(self.score)
             if pos_score != False :
                 self.current_panel = Panel_end_highscore(self.elapsed_frame/self.FPS,self.good_trash,self.bad_trash,self.score,self.highscore.raw_data,pos_score)
+                self.status = "HIGHSCORE"
             to_blit=self.create_idle_highscore()
-            center_blit(idle_screen,to_blit,(SCREEN_SIZE[0]/2,1350))
-             
-    
-
+            center_blit(idle_screen,to_blit,(SCREEN_SIZE[0]/2,1400))
 
     def launch(self) :
         while self.on :
@@ -966,7 +1064,7 @@ class Game() :
             self.leds.step()          
 
             #Handle balls physics and DEFEAT
-            if self.step_balls() :
+            if self.step_balls() and self.playing :
                 self.defeat()
 
             if self.playing :
@@ -993,11 +1091,15 @@ class Game() :
                     case "END" :
                         to_blit = self.current_panel.render()
                         center_blit(SCREEN,to_blit,TRASH_POS)
+                    case "HIGHSCORE" :
+                        to_blit = self.current_panel.render()
+                        center_blit(SCREEN,to_blit,TRASH_POS)
+                        self.step_name_select()
 
             #DEBUG
             if DEBUG :
                 fps = str(round(self.clock.get_fps(),1))
-                txt = "DEBUG MODE | FPS : "+fps+f" | GAME_STATUS : {self.status} | trahs_change_timer : {self.trash_change_timer} | elapsed_frame : {self.elapsed_frame}"
+                txt = "DEBUG MODE | FPS : "+fps+f" | GAME_STATUS : {self.status} | highscore : {self.highscore.as_txt()} | elapsed_frame : {self.elapsed_frame}"
                 to_blit=debug_font.render(txt,1,BLACK,COLOR_BG)
                 SCREEN.blit(to_blit,(0,0))
 
